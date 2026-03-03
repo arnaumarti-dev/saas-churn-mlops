@@ -34,3 +34,7 @@ def predict_churn(payload: ChurnInput) -> ChurnPrediction:
 
     probability, label = predict(app.state.model, payload.model_dump())
     return ChurnPrediction(churn_probability=probability, churn_prediction=label)
+
+@app.get("/")
+def root():
+    return {"message": "Churn MLOps API. See /docs for Swagger UI.", "docs": "/docs", "health": "/health"}
