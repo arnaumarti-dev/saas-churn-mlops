@@ -1,9 +1,10 @@
 import logging
 
 import mlflow
+import pandas as pd
 
 from churn_mlops.config import EXPERIMENT_NAME, MLFLOW_TRACKING_URI, RAW_DATA_PATH
-from churn_mlops.data import clean_data, engineer_features, load_data, split_data
+from churn_mlops.data import clean_data, engineer_features, load_data, split_train_validation_test
 from churn_mlops.logging_config import configure_logging
 from churn_mlops.modeling import (
     build_models,
@@ -21,36 +22,42 @@ def train() -> None:
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
 
-    df = load_data(RAW_DATA_PATH)
-    df = clean_data(df)
-    df = engineer_features(df)
-    X_train, X_test, y_train, y_test = split_data(df)
+    df = engineer_features(clean_data(load_data(RAW_DATA_PATH)))
+    X_train, X_val, X_test, y_train, y_val, y_test = split_train_validation_test(df)
 
-    preprocessor = build_preprocessor(X_train)
-    models = build_models(preprocessor)
-
+    # Preprocessing and imputation are fitted on training data only.
+    candidate_models = build_models(build_preprocessor(X_train))
     best_model_name = ""
-    best_model = None
-    best_auc = -1.0
+    best_auc = float("-inf")
 
-    for model_name, model in models.items():
-        logger.info("Training model: %s", model_name)
+    for model_name, model in candidate_models.items():
+        logger.info("Training candidate model: %s", model_name)
         model.fit(X_train, y_train)
-        metrics = evaluate_model(model, X_test, y_test)
-        log_and_save(model_name, model, metrics)
+        validation_metrics = evaluate_model(model, X_val, y_val)
+        log_and_save(model_name, model, validation_metrics, split="validation")
 
-        if metrics["roc_auc"] > best_auc:
-            best_auc = metrics["roc_auc"]
+        if validation_metrics["roc_auc"] > best_auc:
+            best_auc = validation_metrics["roc_auc"]
             best_model_name = model_name
-            best_model = model
 
-        logger.info("%s metrics: %s", model_name, metrics)
+        logger.info("%s validation metrics: %s", model_name, validation_metrics)
 
-    if best_model is None:
+    if not best_model_name:
         raise RuntimeError("No model was trained.")
 
-    persist_best_model(best_model)
-    logger.info("Best model: %s (ROC-AUC=%.4f)", best_model_name, best_auc)
+    # Select by validation only; refit the winning algorithm on train+validation.
+    X_dev = pd.concat([X_train, X_val])
+    y_dev = pd.concat([y_train, y_val])
+    final_model = build_models(build_preprocessor(X_dev))[best_model_name]
+    final_model.fit(X_dev, y_dev)
+
+    # Evaluate the held-out test set exactly once after model selection.
+    test_metrics = evaluate_model(final_model, X_test, y_test)
+    log_and_save(best_model_name, final_model, test_metrics, split="test")
+    persist_best_model(final_model)
+
+    logger.info("Selected model: %s (validation ROC-AUC=%.4f)", best_model_name, best_auc)
+    logger.info("Final held-out test metrics: %s", test_metrics)
 
 
 if __name__ == "__main__":
