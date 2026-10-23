@@ -200,3 +200,25 @@ Validation metrics and the final test metrics are saved separately in
 Run automated tests with `make test`. The CI workflow checks Python tests and
 builds the API Docker image. **A successful CI run does not by itself verify
 prediction accuracy:** actual dataset metrics must come from a training run.
+
+
+## End-to-end verification
+
+A passing unit-test job alone does not prove that the model can train and serve
+real data. The GitHub Actions **Train model and test real API prediction** job:
+
+1. Downloads the IBM Telco Customer Churn dataset from the upstream source.
+2. Trains both candidate models, picks one by validation ROC-AUC and saves it.
+3. Starts the FastAPI test client, loads the persisted model and checks
+   `GET /health` and a real `POST /predict` built from an input CSV row.
+4. Checks that the model and final test metrics were written, and uploads
+   evaluation metric JSON files as workflow artifacts.
+
+Run the same check locally after `make download-data` and `make train`:
+
+```bash
+make smoke-test
+```
+
+The smoke test checks integration and prediction shape; it does **not**
+establish the model's suitability for real-world customer decisions.
