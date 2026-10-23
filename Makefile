@@ -3,7 +3,7 @@ PIP=pip
 
 export PYTHONPATH=src
 
-.PHONY: install download-data train run-api test mlflow-ui lint docker-build docker-up docker-down
+.PHONY: install download-data train run-api test smoke-test mlflow-ui lint docker-build docker-up docker-down
 
 install:
 	$(PIP) install -r requirements.txt
@@ -19,6 +19,9 @@ run-api:
 
 test:
 	pytest -q
+
+smoke-test:
+	$(PYTHON) scripts/smoke_test.py
 
 mlflow-ui:
 	mlflow ui --backend-store-uri mlruns --host 0.0.0.0 --port 5000
