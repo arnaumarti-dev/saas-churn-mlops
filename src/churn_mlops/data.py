@@ -19,7 +19,6 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     cleaned = df.copy()
     cleaned = cleaned.drop(columns=["customerID"], errors="ignore")
     cleaned["TotalCharges"] = pd.to_numeric(cleaned["TotalCharges"], errors="coerce")
-    cleaned["TotalCharges"] = cleaned["TotalCharges"].fillna(cleaned["TotalCharges"].median())
     cleaned[TARGET_COL] = cleaned[TARGET_COL].map({"Yes": 1, "No": 0})
     return cleaned
 
@@ -41,3 +40,20 @@ def split_data(df: pd.DataFrame):
         random_state=RANDOM_STATE,
         stratify=y,
     )
+
+
+def split_train_validation_test(df: pd.DataFrame):
+    """Return stratified train/validation/test sets (60%/20%/20%).
+
+    Validation selects the algorithm; the test set is reserved for one
+    final evaluation after the winning algorithm is retrained.
+    """
+    X_dev, X_test, y_dev, y_test = split_data(df)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_dev,
+        y_dev,
+        test_size=0.25,  # 25% of the 80% development set = 20% total
+        random_state=RANDOM_STATE,
+        stratify=y_dev,
+    )
+    return X_train, X_val, X_test, y_train, y_val, y_test
