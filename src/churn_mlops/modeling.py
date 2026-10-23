@@ -8,6 +8,7 @@ import mlflow
 import pandas as pd
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     confusion_matrix,
@@ -32,10 +33,10 @@ def build_preprocessor(X: pd.DataFrame) -> ColumnTransformer:
 
     return ColumnTransformer(
         transformers=[
-            ("num", Pipeline(steps=[("scaler", StandardScaler())]), numeric_features),
+            ("num", Pipeline(steps=[("imputer", SimpleImputer(strategy="median")), ("scaler", StandardScaler())]), numeric_features),
             (
                 "cat",
-                Pipeline(steps=[("encoder", OneHotEncoder(handle_unknown="ignore"))]),
+                Pipeline(steps=[("imputer", SimpleImputer(strategy="most_frequent")), ("encoder", OneHotEncoder(handle_unknown="ignore"))]),
                 categorical_features,
             ),
         ]
@@ -98,19 +99,22 @@ def save_confusion_matrix(cm: list[list[int]], output_path: Path) -> None:
     plt.close()
 
 
-def log_and_save(model_name: str, model: Pipeline, metrics: dict) -> None:
+def log_and_save(model_name: str, model: Pipeline, metrics: dict, split: str = "validation") -> None:
+    """Log metrics with the split name to distinguish selection from final testing."""
+    if split not in {"validation", "test"}:
+        raise ValueError("Unknown evaluation split")
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     BEST_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    metrics_path = ARTIFACTS_DIR / f"{model_name}_metrics.json"
+    metrics_path = ARTIFACTS_DIR / f"{model_name}_{split}_metrics.json"
     with metrics_path.open("w", encoding="utf-8") as file:
         json.dump(metrics, file, indent=2)
 
-    cm_path = ARTIFACTS_DIR / f"{model_name}_confusion_matrix.png"
+    cm_path = ARTIFACTS_DIR / f"{model_name}_{split}_confusion_matrix.png"
     save_confusion_matrix(metrics["confusion_matrix"], cm_path)
 
-    with mlflow.start_run(run_name=model_name):
-        mlflow.log_params({"model": model_name})
+    with mlflow.start_run(run_name=f"{model_name}-{split}"):
+        mlflow.log_params({"model": model_name, "evaluation_split": split})
         mlflow.log_metrics({k: v for k, v in metrics.items() if k != "confusion_matrix"})
         mlflow.log_artifact(str(metrics_path))
         mlflow.log_artifact(str(cm_path))
