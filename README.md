@@ -176,3 +176,27 @@ Includes:
 - Artifacts and model persistence separated from business logic.
 - API schema validation via Pydantic.
 - Unit tests for critical pipeline and endpoint behavior.
+
+---
+
+## Model evaluation: leakage-free splits
+
+The training command uses a **60% train / 20% validation / 20% held-out test**
+stratified split with a fixed random seed.
+
+1. Train Logistic Regression and XGBoost on the **train** split.
+2. Fit missing-value imputation, scaling, and one-hot encoding *inside* each
+   sklearn pipeline, so the validation and test data cannot influence fitted
+   preprocessing statistics.
+3. Compare candidate models by **validation ROC-AUC**.
+4. Refit the winning algorithm on **train + validation** data.
+5. Evaluate the held-out **test split once**, after selecting the algorithm.
+
+Run `make download-data`, then `make train`.
+Validation metrics and the final test metrics are saved separately in
+`artifacts/` and MLflow; the winning refitted pipeline is persisted under
+`models/best_model.joblib`.
+
+Run automated tests with `make test`. The CI workflow checks Python tests and
+builds the API Docker image. **A successful CI run does not by itself verify
+prediction accuracy:** actual dataset metrics must come from a training run.
