@@ -103,6 +103,8 @@ def get_oidc_principal(
         if not isinstance(subject, str) or not 1 <= len(subject) <= 255:
             raise jwt.InvalidTokenError("Invalid subject")
         return Principal(issuer=cfg.issuer, subject=subject)
+    except jwt.PyJWKClientError as exc:
+        raise HTTPException(status_code=503, detail="Identity service unavailable") from exc
     except jwt.InvalidTokenError as exc:
         raise HTTPException(
             status_code=401, detail="Invalid or expired access token",
@@ -124,9 +126,13 @@ def membership_role(tenant_id, principal: Principal) -> str:
     try:
         with psycopg.connect(cfg.database_url, connect_timeout=4) as conn:
             with conn.transaction():
+                # All three RLS settings live only for this transaction.
+                # Never use session-level SET with pooled connections.
                 conn.execute(
-                    "SELECT set_config('app.tenant_id', %s, true)",
-                    (str(tenant_id),),
+                    """SELECT set_config('app.tenant_id', %s, true),
+                              set_config('app.oidc_issuer', %s, true),
+                              set_config('app.oidc_subject', %s, true)""",
+                    (str(tenant_id), principal.issuer, principal.subject),
                 )
                 row = conn.execute(
                     """SELECT role FROM saas.memberships
