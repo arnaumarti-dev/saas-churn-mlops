@@ -115,6 +115,9 @@
     const batchError = document.getElementById("batch-error");
     const batchSubmit = document.getElementById("batch-submit");
     let batchCustomers = [];
+    let analyzedRows = null;
+    let batchGeneration = 0;
+    const analytics = window.ChurnDashboardUtils;
 
     function viewTab(which) {
       const isBatch = which === "batch";
@@ -148,7 +151,14 @@
     }
 
     function setBatchCustomers(customers, description) {
+      batchGeneration += 1;
       batchCustomers = customers;
+      analyzedRows = null;
+      document.getElementById("batch-risk-filter").value = "all";
+      document.getElementById("batch-contract-filter").value = "all";
+      document.getElementById("batch-sort").value = "file";
+      document.getElementById("batch-export").disabled = true;
+      document.getElementById("batch-segments-panel").hidden = true;
       batchSubmit.disabled = customers.length === 0;
       batchError.hidden = true;
       document.getElementById("batch-preview").textContent = description;
@@ -266,8 +276,92 @@
       return (Number(number) * 100).toFixed(1).replace(".", ",") + " %";
     }
 
+    function showContractSegments(rows) {
+      const container = document.getElementById("contract-segments");
+      container.replaceChildren();
+      const contracts = {
+        "Month-to-month": "Mensual",
+        "One year": "Anual",
+        "Two year": "Dos años",
+        "Otros": "Otros"
+      };
+      for (const segment of analytics.contractSegments(rows)) {
+        const item = document.createElement("div");
+        item.className = "contract-segment";
+        const header = document.createElement("div");
+        header.className = "contract-segment-header";
+        const title = document.createElement("strong");
+        title.textContent = contracts[segment.contract];
+        const stat = document.createElement("span");
+        stat.textContent = segment.high + " / " + segment.total + " sobre el umbral";
+        header.append(title, stat);
+        const track = document.createElement("div");
+        track.className = "contract-segment-track";
+        track.setAttribute("role", "img");
+        track.setAttribute("aria-label", contracts[segment.contract] +
+          ": " + segment.high + " de " + segment.total + " perfiles sobre el umbral.");
+        const filled = document.createElement("div");
+        filled.className = "contract-segment-fill";
+        filled.style.width = segment.highPercent + "%";
+        track.append(filled);
+        item.append(header, track);
+        container.append(item);
+      }
+      document.getElementById("batch-segments-panel").hidden = false;
+    }
+
+    function currentFilteredRows() {
+      if (!analyzedRows) return [];
+      return analytics.selectRows(
+        analyzedRows,
+        document.getElementById("batch-risk-filter").value,
+        document.getElementById("batch-contract-filter").value,
+        document.getElementById("batch-sort").value
+      );
+    }
+
+    function renderFilteredRows() {
+      const selected = currentFilteredRows();
+      const table = document.getElementById("batch-table");
+      table.replaceChildren();
+      for (const prediction of selected) {
+        const row = document.createElement("tr");
+        const number = document.createElement("td");
+        const probability = document.createElement("td");
+        const status = document.createElement("td");
+        number.textContent = String(prediction.csvRow);
+        probability.textContent = formatPercent(prediction.probability);
+        status.textContent = prediction.label === 1 ? "Sobre el umbral" : "Bajo el umbral";
+        status.className = prediction.label === 1 ? "risk-high" : "risk-low";
+        row.append(number, probability, status);
+        table.append(row);
+      }
+      document.getElementById("batch-match-count").textContent =
+        selected.length + " de " + (analyzedRows ? analyzedRows.length : 0) + " predicciones mostradas.";
+      document.getElementById("batch-export").disabled = selected.length === 0;
+    }
+
+    for (const id of ["batch-risk-filter", "batch-contract-filter", "batch-sort"]) {
+      document.getElementById(id).addEventListener("change", renderFilteredRows);
+    }
+
+    document.getElementById("batch-export").addEventListener("click", () => {
+      const rows = currentFilteredRows();
+      if (!rows.length) return;
+      const csv = analytics.csvExport(rows);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = "churn-resultados-demo.csv";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    });
+
     batchSubmit.addEventListener("click", async () => {
       if (!batchCustomers.length) return;
+      const generation = batchGeneration;
+      const submittedCustomers = batchCustomers.slice();
       batchError.hidden = true;
       batchSubmit.disabled = true;
       batchSubmit.textContent = "Analizando clientes…";
@@ -275,7 +369,7 @@
         const response = await fetch("/predict/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ customers: batchCustomers })
+          body: JSON.stringify({ customers: submittedCustomers })
         });
         if (!response.ok) {
           if (response.status === 429) throw new Error("Límite de solicitudes alcanzado. Prueba dentro de un minuto.");
@@ -283,8 +377,9 @@
           throw new Error("Error de la API al analizar clientes (HTTP " + response.status + "). Revisa el archivo.");
         }
         const result = await response.json();
-        if (!Array.isArray(result.predictions) || result.predictions.length !== batchCustomers.length ||
-            result.summary.total_customers !== batchCustomers.length) {
+        if (generation !== batchGeneration) return;
+        if (!Array.isArray(result.predictions) || result.predictions.length !== submittedCustomers.length ||
+            result.summary.total_customers !== submittedCustomers.length) {
           throw new Error("Respuesta inesperada del modelo.");
         }
         const summary = result.summary;
@@ -302,26 +397,17 @@
         document.getElementById("legend-high").textContent = String(summary.high_risk_customers);
         document.getElementById("legend-low").textContent = String(summary.low_risk_customers);
 
-        const table = document.getElementById("batch-table");
-        table.replaceChildren();
-        result.predictions.forEach((prediction, index) => {
-          const row = document.createElement("tr");
-          const number = document.createElement("td");
-          const probability = document.createElement("td");
-          const status = document.createElement("td");
-          number.textContent = String(index + 2);
-          probability.textContent = formatPercent(prediction.churn_probability);
-          status.textContent = prediction.churn_prediction === 1 ? "Sobre el umbral" : "Bajo el umbral";
-          status.className = prediction.churn_prediction === 1 ? "risk-high" : "risk-low";
-          row.append(number, probability, status);
-          table.append(row);
-        });
+        analyzedRows = analytics.validateRows(submittedCustomers, result.predictions);
+        showContractSegments(analyzedRows);
+        renderFilteredRows();
         document.getElementById("batch-empty").hidden = true;
         document.getElementById("batch-metrics").hidden = false;
         document.getElementById("batch-results").hidden = false;
       } catch (problem) {
-        batchError.textContent = problem instanceof Error ? problem.message : "Error inesperado.";
-        batchError.hidden = false;
+        if (generation === batchGeneration) {
+          batchError.textContent = problem instanceof Error ? problem.message : "Error inesperado.";
+          batchError.hidden = false;
+        }
       } finally {
         batchSubmit.disabled = batchCustomers.length === 0;
         batchSubmit.textContent = "Analizar clientes →";

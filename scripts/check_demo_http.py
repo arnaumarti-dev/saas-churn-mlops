@@ -69,6 +69,11 @@ def main() -> None:
     assert "text/html" in content_type, content_type
     assert b"Churn Lab" in html
     assert b"/assets/demo.js" in html and b"/assets/demo.css" in html
+    assert b"/assets/dashboard-utils.js" in html
+    assert b'id="batch-contract-filter"' in html
+    helper_status, _, helper_script = fetch(Request(BASE_URL + "/assets/dashboard-utils.js"))
+    assert helper_status == 200
+    assert b"csvExport" in helper_script
     js_status, _, script = fetch(Request(BASE_URL + "/assets/demo.js"))
     assert js_status == 200
     assert b'fetch("/predict"' in script

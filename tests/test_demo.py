@@ -66,4 +66,28 @@ def test_batch_dashboard_contains_import_controls_and_metrics() -> None:
     assert 'fetch("/predict/batch"' in script.text
     assert "batchMaxRows = 200" in script.text
     assert "customersFromCSV" in script.text
+
     assert "textContent" in script.text
+
+
+def test_segment_analytics_filters_and_export_are_self_hosted() -> None:
+    client = TestClient(app)
+    page = client.get("/")
+    for identifier in (
+        "batch-segments-panel", "contract-segments", "batch-risk-filter",
+        "batch-contract-filter", "batch-sort", "batch-export",
+        "batch-match-count",
+    ):
+        assert f'id="{identifier}"' in page.text
+
+    scripts = page.text
+    assert scripts.index('src="/assets/dashboard-utils.js"') < scripts.index(
+        'src="/assets/demo.js"'
+    )
+    helper = client.get("/assets/dashboard-utils.js")
+    assert helper.status_code == 200
+    assert "csvExport" in helper.text
+    assert "selectRows" in helper.text
+    assert "script-src 'self'" in helper.headers["content-security-policy"]
+    assert "unsafe-inline" not in helper.headers["content-security-policy"]
+
