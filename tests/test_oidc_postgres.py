@@ -3,7 +3,6 @@
 The CI SaaS job provisions the ephemeral DB. Standard demo CI skips optional
 integration testing because neither a DB nor SaaS dependencies are installed.
 """
-import json
 import os
 import time
 from types import SimpleNamespace
@@ -81,7 +80,25 @@ def test_refuse_unsigned_hs256_wrong_rsa_key_and_missing_kid(identity):
          "iat": int(time.time()), "exp": int(time.time()) + 300},
         other, algorithm="RS256", headers={"kid": "different"},
     ))
-    _reject(identity(), status=401) if False else None  # no extra test requests
+
+
+
+SAMPLE = {
+    "gender": "Female", "SeniorCitizen": 0, "Partner": "No",
+    "Dependents": "No", "tenure": 2, "PhoneService": "Yes",
+    "MultipleLines": "No", "InternetService": "Fiber optic",
+    "OnlineSecurity": "No", "OnlineBackup": "No",
+    "DeviceProtection": "No", "TechSupport": "No",
+    "StreamingTV": "No", "StreamingMovies": "No",
+    "Contract": "Month-to-month", "PaperlessBilling": "Yes",
+    "PaymentMethod": "Electronic check", "MonthlyCharges": 89.5,
+    "TotalCharges": 179.0,
+}
+
+
+class DummyModel:
+    def predict_proba(self, frame):
+        return [[0.2, 0.8] for _ in frame["tenure"]]
 
 
 def test_missing_auth_and_bad_operator_configuration(identity, monkeypatch):
@@ -208,3 +225,23 @@ def test_real_postgres_membership_and_rls(identity, monkeypatch):
             headers={"Authorization": "Bearer " + token},
         )
         assert other.status_code == 404
+        app.state.model = {"model": DummyModel(), "decision_threshold": 0.4}
+        analysis = client.post(
+            f"/saas/v2/tenants/{tenant_a}/predict/batch",
+            headers={"Authorization": "Bearer " + token},
+            json={"customers": [SAMPLE]},
+        )
+        assert analysis.status_code == 200, analysis.text
+        assert analysis.json()["summary"]["total_customers"] == 1
+        assert analysis.headers["cache-control"] == "no-store"
+        assert client.post(
+            f"/saas/v2/tenants/{tenant_b}/predict/batch",
+            headers={"Authorization": "Bearer " + token},
+            json={"customers": [SAMPLE]},
+        ).status_code == 404
+        assert client.post(
+            f"/saas/v2/tenants/{tenant_b}/predict/batch",
+            headers={"Authorization": "Bearer " + identity(sub="oidc-bob")},
+            json={"customers": [SAMPLE]},
+        ).status_code == 403
+
