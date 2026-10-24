@@ -3,6 +3,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from churn_mlops.api.security import SecurityMiddleware
 
 from churn_mlops.inference import load_model, predict
 from churn_mlops.logging_config import configure_logging
@@ -12,7 +15,10 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SaaS Churn Prediction API", version="1.1.0")
-DEMO_HTML = Path(__file__).resolve().parent / "static" / "index.html"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+DEMO_HTML = STATIC_DIR / "index.html"
+app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
+app.add_middleware(SecurityMiddleware)
 app.state.model = None
 
 
