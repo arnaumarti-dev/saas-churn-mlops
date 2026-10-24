@@ -273,3 +273,41 @@ so its result uses the real trained model rather than mock predictions.
 This is a portfolio demonstration based on IBM Telco Customer Churn data,
 not a validated commercial retention tool. Its outputs should not drive
 automated decisions about individuals.
+
+
+## Deployable self-contained demo image
+
+The default `Dockerfile` is a development/inference image that requires a
+separately trained `models/best_model.joblib` at runtime.
+
+For a portfolio demonstration, use the opt-in `Dockerfile.demo`.
+It downloads the public IBM Telco dataset and trains the model **during the
+image build**, then copies only the final model artifact and minimal runtime
+dependencies into a second stage. The runtime container does **not** download
+data or retrain on every startup.
+
+```bash
+docker build -f Dockerfile.demo -t churn-demo:local .
+docker run --rm -p 8000:8000 churn-demo:local
+```
+
+Open **http://localhost:8000/** to use the dashboard, or
+**http://localhost:8000/docs** for Swagger/OpenAPI.
+In another terminal, verify the container with:
+
+```bash
+python scripts/check_demo_http.py
+```
+
+The smoke test checks the HTML page and an actual `POST /predict`, using only
+Python's standard library. GitHub Actions builds the dedicated image and runs
+the same HTTP checks automatically. Providers that accept Dockerfiles can
+build `Dockerfile.demo` with a service port given by the `PORT` environment
+variable (default 8000).
+
+**Public hosting has not been configured or performed.** Choose a host and
+control costs/quotas before deploying. The build requires Internet access
+to the IBM dataset; pin the source artifact/checksum before promising long-term
+build reproducibility. Do not submit real customer data to a public demo.
+The educational model does not establish fairness, calibrated business costs
+or suitability for automated retention decisions.
