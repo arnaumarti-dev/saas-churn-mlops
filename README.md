@@ -552,3 +552,15 @@ dependencies, no secrets and no real users. See
 [docs/organization-admin-staging.md](docs/organization-admin-staging.md)
 for setup, feature flags and significant security limitations. Do not
 enable these routes on the public portfolio site.
+
+## v1.9 candidate — Private staging organization console
+
+The new **default-off** `/saas/v3/console` presents a responsive,
+authenticated Spanish management screen for the existing private v1.8
+organization API: create an example company, redeem or issue invitation
+codes, and for owners, change and revoke organization member roles.
+Its UI and JS/CSS require the same staging feature flags and encrypted
+session; they are not linked from or publicly enabled in the portfolio
+demo. The service still needs a private OIDC identity provider and
+PostgreSQL to become interactive. See
+[docs/private-console-staging.md](docs/private-console-staging.md).
