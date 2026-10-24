@@ -36,6 +36,15 @@
     const form = document.getElementById("prediction-form");
     const error = document.getElementById("error-message");
     const submit = document.getElementById("submit-button");
+    let singleGeneration = 0;
+    function invalidateSingleResult() {
+      singleGeneration += 1;
+      error.hidden = true;
+      document.getElementById("result-data").hidden = true;
+      document.getElementById("result-empty").hidden = false;
+    }
+    form.addEventListener("input", invalidateSingleResult);
+    form.addEventListener("change", invalidateSingleResult);
     const samples = {
       risky: { Contract: "Month-to-month", tenure: 2, MonthlyCharges: 89.50, TotalCharges: 179,
         InternetService: "Fiber optic", PaymentMethod: "Electronic check", OnlineSecurity: "No",
@@ -49,9 +58,7 @@
         const field = form.elements.namedItem(name);
         if (field) field.value = String(value);
       }
-      error.hidden = true;
-      document.getElementById("result-data").hidden = true;
-      document.getElementById("result-empty").hidden = false;
+      invalidateSingleResult();
     }
     document.getElementById("example-risk").addEventListener("click", () => setSample("risky"));
     document.getElementById("example-stable").addEventListener("click", () => setSample("stable"));
@@ -59,6 +66,7 @@
     form.addEventListener("submit", async event => {
       event.preventDefault();
       if (!form.reportValidity()) return;
+      const generation = singleGeneration;
       error.hidden = true;
       submit.disabled = true;
       submit.textContent = "Calculando predicción…";
@@ -75,6 +83,7 @@
           throw new Error("No se pudo generar la predicción (HTTP " + response.status + "). Comprueba los datos.");
         }
         const result = await response.json();
+        if (generation !== singleGeneration) return;
         const probability = Math.max(0, Math.min(1, Number(result.churn_probability)));
         const threshold = Number(result.decision_threshold);
         if (!Number.isFinite(probability) || !(threshold > 0 && threshold < 1)) throw new Error("La API devolvió una respuesta no válida.");
@@ -91,8 +100,10 @@
         pill.textContent = high ? "Riesgo sobre el umbral" : "Riesgo bajo el umbral";
         pill.classList.toggle("low", !high);
       } catch (exception) {
-        error.textContent = exception instanceof Error ? exception.message : "Error inesperado";
-        error.hidden = false;
+        if (generation === singleGeneration) {
+          error.textContent = exception instanceof Error ? exception.message : "Error inesperado";
+          error.hidden = false;
+        }
       } finally {
         submit.disabled = false;
         submit.textContent = "Calcular riesgo de abandono →";
