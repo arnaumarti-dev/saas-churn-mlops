@@ -222,3 +222,26 @@ make smoke-test
 
 The smoke test checks integration and prediction shape; it does **not**
 establish the model's suitability for real-world customer decisions.
+
+
+## Validation-tuned decision threshold
+
+The project selects the winning algorithm by **validation ROC-AUC**, then
+tunes the positive-class decision threshold using **validation data only**.
+The tuning objective maximizes **F2** (which weights recall more heavily
+than precision) over thresholds from 0.15 to 0.85 in steps of 0.01.
+Candidate thresholds must achieve at least **55% precision on validation**;
+if none does, the project uses 0.50. This precision floor is a provisional
+learning-project requirement, **not** an estimated retention-intervention cost.
+
+The model is refitted on train + validation, and the final threshold is saved
+**together with the estimator** in a single joblib artifact. The FastAPI
+\`POST /predict\` response now includes \`decision_threshold\`, and its
+\`churn_prediction\` is computed from \`churn_probability >= decision_threshold\`.
+Older plain-estimator artifacts remain usable at the default 0.50 threshold.
+
+The CI training job checks end-to-end inference and publishes metrics for
+validation, validation after threshold tuning, and the held-out test split.
+Do not choose or readjust the threshold based on held-out test metrics;
+that would invalidate the final test as an unbiased check. Further product
+decisions would need intervention-cost analysis and monitoring on new data.
