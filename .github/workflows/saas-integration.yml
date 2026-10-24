@@ -8,6 +8,8 @@ on:
       - "src/churn_mlops/api/security.py"
       - "db/migrations/**"
       - "tests/test_oidc_postgres.py"
+      - "tests/test_staging_login.py"
+      - "src/churn_mlops/api/staging_login.py"
       - "requirements.saas.txt"
       - ".github/workflows/saas-integration.yml"
   push:
@@ -61,6 +63,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
             -f db/migrations/0001_saas_tenants_rls.sql
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
+            -f db/migrations/0002_member_org_selector.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
             -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname='churn_saas_app';"
       - name: Verify RSA token validation and live cross-tenant RLS
-        run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py
+        run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py tests/test_staging_login.py
