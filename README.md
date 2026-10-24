@@ -540,3 +540,15 @@ No real IdP has been connected. Public Render remains without login,
 cookies, company databases or real customer data. Instructions and
 security caveats are in
 [docs/oidc-browser-login-staging.md](docs/oidc-browser-login-staging.md).
+
+## v1.8 candidate — Private organization administration
+
+The staging-only, **default-off** organization admin API can create a
+synthetic tenant, issue 24-hour single-use invitation codes (no email),
+redeem them and let tenant owners list, change roles or revoke members.
+Permission checks run inside transactionally scoped PostgreSQL routines;
+the final owner cannot be removed. Public Render requires no new runtime
+dependencies, no secrets and no real users. See
+[docs/organization-admin-staging.md](docs/organization-admin-staging.md)
+for setup, feature flags and significant security limitations. Do not
+enable these routes on the public portfolio site.
