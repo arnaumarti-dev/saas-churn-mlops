@@ -294,7 +294,9 @@ def organizations(principal: Principal = Depends(get_browser_principal)):
     return _page(
         "Mis empresas", "<p>Entorno privado de pruebas. No cargues datos reales.</p>"
         "<ul>" + items + "</ul>"
-        "<form method='post' action='/saas/v3/logout'>"
+        + ("<p><a href='/saas/v3/console'>Abrir panel privado de administración</a></p>"
+           if os.environ.get("CHURN_SAAS_MANAGEMENT_ENABLED") == "1" else "")
+        + "<form method='post' action='/saas/v3/logout'>"
         "<button type='submit'>Cerrar sesión</button></form>",
     )
 
