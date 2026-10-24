@@ -450,3 +450,30 @@ probability, and exporting the **currently filtered** result rows as CSV.
 
 Unit tests for these analytical helpers use the built-in Node test runner;
 there are no new runtime or browser dependencies.
+
+
+## Interface usability and accessibility improvements (v1.4 candidate)
+
+The existing individual/batch views have a keyboard-accessible tablist:
+Left/Right/Home/End select and focus the corresponding tab, plus a "skip to
+content" link. The batch flow now includes three visible steps, an accessible
+live status message while scoring, a **Cancel analysis** action and a shortcut
+to the results.
+
+- Choosing a new file or loading an example clears outdated results and cancels
+  a pending batch request. Slow or out-of-order file reads cannot replace newer
+  selections. Editing an individual profile invalidates its previous result.
+- Empty result filters display a clear explanation and **Clear filters**;
+  export is unavailable when no rows match.
+- CSS includes narrow-phone layouts (down to 375 px), minimum 44 px action
+  targets and reduced-motion support. No new CDN assets, tracking scripts,
+  third-party browser dependencies, authentication or server storage.
+- Existing CSP, rate limits, payload limits and schema validation are unchanged.
+
+CI executes JavaScript behavior tests in a simulated DOM, source-level
+accessibility checks and the full Docker HTTP smoke test. **These are not a
+substitute for manual visual QA in real desktop/mobile browsers.** Before
+deploying, manually inspect at 375 px, 620 px and desktop widths; navigate the
+tablist using only the keyboard, upload the example CSV, test cancelled and
+empty analyses, verify focus indicators and try 200% text zoom. Continue to use
+synthetic profiles only.
