@@ -16,7 +16,7 @@ MAX_PREDICT_BODY = 16 * 1024
 MAX_BATCH_BODY = 256 * 1024
 PREDICTIONS_PER_MINUTE = 30
 MAX_RATE_LIMIT_IDENTITIES = 4096
-TENANT_BATCH_PATH = re.compile(r"^/saas/v1/tenants/[^/]+/predict/batch$")
+TENANT_BATCH_PATH = re.compile(r"^/saas/v[12]/tenants/[^/]+/predict/batch$")
 
 CSP = (
     "default-src 'none'; "
@@ -108,7 +108,7 @@ class SecurityMiddleware:
                         if key == b"content-security-policy" and scope["path"] in {"/docs", "/redoc"}:
                             value = DOCS_CSP.encode("ascii")
                         headers.append((key, value))
-                if scope["path"] in {"/predict", "/predict/batch"} or scope["path"].startswith("/saas/v1/"):
+                if scope["path"] in {"/predict", "/predict/batch"} or scope["path"].startswith("/saas/v1/") or scope["path"].startswith("/saas/v2/"):
                     headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": headers}
             await send(message)
