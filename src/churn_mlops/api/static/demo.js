@@ -379,11 +379,29 @@
       document.getElementById("batch-match-count").textContent =
         selected.length + " de " + (analyzedRows ? analyzedRows.length : 0) + " predicciones mostradas.";
       document.getElementById("batch-export").disabled = selected.length === 0;
+      document.getElementById("batch-no-matches").hidden = selected.length !== 0;
+      document.getElementById("batch-table-scroll").hidden = selected.length === 0;
+      const hasFilters = document.getElementById("batch-risk-filter").value !== "all" ||
+        document.getElementById("batch-contract-filter").value !== "all" ||
+        document.getElementById("batch-sort").value !== "file";
+      document.getElementById("batch-clear-filters").disabled = !hasFilters;
     }
 
     for (const id of ["batch-risk-filter", "batch-contract-filter", "batch-sort"]) {
       document.getElementById(id).addEventListener("change", renderFilteredRows);
     }
+    document.getElementById("batch-clear-filters").addEventListener("click", () => {
+      document.getElementById("batch-risk-filter").value = "all";
+      document.getElementById("batch-contract-filter").value = "all";
+      document.getElementById("batch-sort").value = "file";
+      renderFilteredRows();
+      document.getElementById("batch-risk-filter").focus();
+    });
+    document.getElementById("batch-jump-results").addEventListener("click", () => {
+      const heading = document.getElementById("batch-results-heading");
+      heading.scrollIntoView({ behavior: "auto", block: "start" });
+      heading.focus({ preventScroll: true });
+    });
 
     document.getElementById("batch-export").addEventListener("click", () => {
       const rows = currentFilteredRows();
@@ -402,19 +420,28 @@
       if (!batchCustomers.length) return;
       const generation = batchGeneration;
       const submittedCustomers = batchCustomers.slice();
+      const controller = new AbortController();
+      pendingBatchRequest = controller;
       batchError.hidden = true;
       batchSubmit.disabled = true;
+      batchSubmit.classList.add("is-loading");
       batchSubmit.textContent = "Analizando clientes…";
+      document.getElementById("batch-view").setAttribute("aria-busy", "true");
+      batchStatus.textContent = "Calculando el riesgo de " + submittedCustomers.length + " perfiles…";
+      document.getElementById("batch-jump-results").hidden = true;
       try {
         const response = await fetch("/predict/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({ customers: submittedCustomers })
         });
         if (!response.ok) {
           if (response.status === 429) throw new Error("Límite de solicitudes alcanzado. Prueba dentro de un minuto.");
           if (response.status === 413) throw new Error("El lote es demasiado grande. Reduce el tamaño.");
-          throw new Error("Error de la API al analizar clientes (HTTP " + response.status + "). Revisa el archivo.");
+          if (response.status === 422) throw new Error("Alguna fila tiene un valor inválido. Revisa el CSV y vuelve a analizar.");
+          if (response.status === 503) throw new Error("El modelo no está disponible temporalmente. Prueba más tarde.");
+          throw new Error("Error del servicio (HTTP " + response.status + "). Prueba de nuevo.");
         }
         const result = await response.json();
         if (generation !== batchGeneration) return;
@@ -443,13 +470,22 @@
         document.getElementById("batch-empty").hidden = true;
         document.getElementById("batch-metrics").hidden = false;
         document.getElementById("batch-results").hidden = false;
+        document.getElementById("batch-jump-results").hidden = false;
+        batchStatus.textContent = "Análisis completado: " + summary.total_customers +
+          " perfiles, " + summary.high_risk_customers + " sobre el umbral. Consulta el panel.";
       } catch (problem) {
-        if (generation === batchGeneration) {
+        if (generation === batchGeneration && !controller.signal.aborted) {
           batchError.textContent = problem instanceof Error ? problem.message : "Error inesperado.";
           batchError.hidden = false;
+          batchStatus.textContent = "No se ha completado el análisis. Revisa el mensaje de error.";
         }
       } finally {
-        batchSubmit.disabled = batchCustomers.length === 0;
-        batchSubmit.textContent = "Analizar clientes →";
+        if (pendingBatchRequest === controller) pendingBatchRequest = null;
+        if (generation === batchGeneration) {
+          document.getElementById("batch-view").setAttribute("aria-busy", "false");
+          batchSubmit.disabled = batchCustomers.length === 0;
+          batchSubmit.classList.remove("is-loading");
+          batchSubmit.textContent = "Analizar clientes →";
+        }
       }
     });
