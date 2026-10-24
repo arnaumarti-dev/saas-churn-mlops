@@ -524,3 +524,19 @@ staging feature is off unless explicitly configured.
 See [docs/oidc-postgres-staging.md](docs/oidc-postgres-staging.md).
 Never enable it on public Render or submit real customer records before
 a full security, privacy and operations review.
+
+## Private OIDC browser login and organizations (v1.7 candidate)
+
+A new **default-off staging-only** browser flow uses Authorization Code
++ PKCE, signed ID-token/nonce verification, Secure HttpOnly short-lived
+encrypted cookies and a page to list the signed-in user's **own**
+PostgreSQL organization memberships. The migration
+`db/migrations/0002_member_org_selector.sql` permits listing the current
+user's active memberships without revealing other users. Changes of
+organization roles, invitations, company creation and customer storage
+are **not** implemented.
+
+No real IdP has been connected. Public Render remains without login,
+cookies, company databases or real customer data. Instructions and
+security caveats are in
+[docs/oidc-browser-login-staging.md](docs/oidc-browser-login-staging.md).
