@@ -311,3 +311,36 @@ to the IBM dataset; pin the source artifact/checksum before promising long-term
 build reproducibility. Do not submit real customer data to a public demo.
 The educational model does not establish fairness, calibrated business costs
 or suitability for automated retention decisions.
+
+
+## Public portfolio demo: Render (optional)
+
+An opt-in `render.yaml` Blueprint now describes a **Free** Render web service
+for the Dockerized demo; merely committing it does not create a service.
+
+To publish it manually:
+
+1. Sign into [Render](https://dashboard.render.com/) and connect GitHub.
+2. Select **New > Blueprint** and choose `arnaumarti-dev/saas-churn-mlops`,
+   branch `main`. Render should discover the root `render.yaml`.
+3. Review the resource details **before approving**: web service
+   `churn-mlops-demo`, Docker runtime, `Dockerfile.demo`, Frankfurt region,
+   `free` compute plan and health check `/health`.
+4. Start the Blueprint deployment. Render builds the trained model into the
+   container image and then serves the FastAPI home page at its **assigned**
+   `onrender.com` URL. No URL exists until the service is actually created.
+5. Check the generated home page, `/health`, `/docs`, and submit a
+   demonstrative (non-personal) client profile to confirm `POST /predict`.
+
+**Important limitations and costs:** Render's Free web services can spin down
+after 15 minutes of inactivity and take approximately a minute to start again.
+The plan has monthly compute, build and bandwidth limits. Review current
+billing and usage limits before enabling deployment; extra bandwidth can incur
+charges. Free instances and this tutorial are not intended for production.
+Because `Dockerfile.demo` fetches the public IBM data source during build,
+deployment also depends on availability of that upstream URL.
+
+This application has no accounts, authentication or request throttling and
+should be used only with fictional/demonstration profiles. Never enter real
+customer records or other sensitive information. Public hosting has not been
+performed by this repository change.
