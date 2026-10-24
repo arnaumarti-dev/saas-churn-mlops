@@ -117,21 +117,42 @@
     let batchCustomers = [];
     let analyzedRows = null;
     let batchGeneration = 0;
+    let fileSelectionGeneration = 0;
+    let pendingBatchRequest = null;
+    const batchStatus = document.getElementById("batch-status");
     const analytics = window.ChurnDashboardUtils;
 
+    // Keyboard-operable tabs: Left/Right/Home/End follow the ARIA tablist pattern.
+    const tabs = ["single", "batch"];
     function viewTab(which) {
       const isBatch = which === "batch";
       document.getElementById("single-view").hidden = isBatch;
       document.getElementById("batch-view").hidden = !isBatch;
-      for (const name of ["single", "batch"]) {
+      for (const name of tabs) {
         const tab = document.getElementById("tab-" + name);
         const active = name === which;
         tab.classList.toggle("active", active);
         tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
       }
     }
-    document.getElementById("tab-single").addEventListener("click", () => viewTab("single"));
-    document.getElementById("tab-batch").addEventListener("click", () => viewTab("batch"));
+    for (const name of tabs) {
+      const tab = document.getElementById("tab-" + name);
+      tab.addEventListener("click", () => viewTab(name));
+      tab.addEventListener("keydown", event => {
+        const index = tabs.indexOf(name);
+        const next = {
+          ArrowRight: tabs[(index + 1) % tabs.length],
+          ArrowLeft: tabs[(index + tabs.length - 1) % tabs.length],
+          Home: tabs[0],
+          End: tabs[tabs.length - 1]
+        }[event.key];
+        if (!next) return;
+        event.preventDefault();
+        viewTab(next);
+        document.getElementById("tab-" + next).focus();
+      });
+    }
 
     function fakeCustomers() {
       const baseline = Object.fromEntries(new FormData(form).entries());
@@ -152,15 +173,27 @@
 
     function setBatchCustomers(customers, description) {
       batchGeneration += 1;
+      if (pendingBatchRequest) pendingBatchRequest.abort();
+      pendingBatchRequest = null;
       batchCustomers = customers;
       analyzedRows = null;
       document.getElementById("batch-risk-filter").value = "all";
       document.getElementById("batch-contract-filter").value = "all";
       document.getElementById("batch-sort").value = "file";
       document.getElementById("batch-export").disabled = true;
+      document.getElementById("batch-clear-filters").disabled = true;
       document.getElementById("batch-segments-panel").hidden = true;
+      document.getElementById("batch-no-matches").hidden = true;
+      document.getElementById("batch-table-scroll").hidden = false;
+      document.getElementById("batch-jump-results").hidden = true;
+      document.getElementById("batch-view").setAttribute("aria-busy", "false");
       batchSubmit.disabled = customers.length === 0;
+      batchSubmit.textContent = "Analizar clientes →";
+      batchSubmit.classList.remove("is-loading");
       batchError.hidden = true;
+      batchStatus.textContent = customers.length
+        ? customers.length + " perfiles listos. Pulsa «Analizar clientes» para continuar."
+        : "Selecciona datos ficticios para comenzar.";
       document.getElementById("batch-preview").textContent = description;
       document.getElementById("batch-empty").hidden = false;
       document.getElementById("batch-metrics").hidden = true;
@@ -241,6 +274,7 @@
     }
 
     document.getElementById("batch-example").addEventListener("click", () => {
+      fileSelectionGeneration += 1;
       batchFile.value = "";
       setBatchCustomers(fakeCustomers(), "12 clientes de prueba ficticios cargados. Ninguno corresponde a una persona real.");
     });
@@ -261,14 +295,20 @@
     batchFile.addEventListener("change", async () => {
       const file = batchFile.files && batchFile.files[0];
       if (!file) return;
+      const generation = ++fileSelectionGeneration;
+      setBatchCustomers([], "Leyendo archivo CSV…");
+      batchStatus.textContent = "Validando archivo…";
       try {
         if (file.size > batchMaxFileBytes) throw new Error("El CSV no puede superar 256 KiB.");
         const customers = customersFromCSV(await file.text());
+        if (generation !== fileSelectionGeneration) return;
         setBatchCustomers(customers, customers.length + " filas importadas de CSV, listas para analizar.");
       } catch (problem) {
+        if (generation !== fileSelectionGeneration) return;
         setBatchCustomers([], "Archivo no cargado.");
         batchError.textContent = problem instanceof Error ? problem.message : "No se pudo leer el CSV.";
         batchError.hidden = false;
+        batchStatus.textContent = "No se ha podido importar el archivo. Revisa el mensaje de error.";
       }
     });
 
