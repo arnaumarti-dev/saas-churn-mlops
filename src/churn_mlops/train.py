@@ -12,6 +12,7 @@ from churn_mlops.modeling import (
     evaluate_model,
     log_and_save,
     persist_best_model,
+    select_decision_threshold,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,12 @@ def train() -> None:
     if not best_model_name:
         raise RuntimeError("No model was trained.")
 
+    # Tune the decision threshold ONLY on validation for the selected algorithm.
+    threshold, tuned_validation_metrics = select_decision_threshold(
+        candidate_models[best_model_name], X_val, y_val, min_precision=0.55
+    )
+    log_and_save(best_model_name, candidate_models[best_model_name], tuned_validation_metrics, split="validation_tuned")
+
     # Select by validation only; refit the winning algorithm on train+validation.
     X_dev = pd.concat([X_train, X_val])
     y_dev = pd.concat([y_train, y_val])
@@ -52,11 +59,13 @@ def train() -> None:
     final_model.fit(X_dev, y_dev)
 
     # Evaluate the held-out test set exactly once after model selection.
-    test_metrics = evaluate_model(final_model, X_test, y_test)
+    test_metrics = evaluate_model(final_model, X_test, y_test, threshold=threshold)
     log_and_save(best_model_name, final_model, test_metrics, split="test")
-    persist_best_model(final_model)
+    persist_best_model(final_model, threshold=threshold)
 
     logger.info("Selected model: %s (validation ROC-AUC=%.4f)", best_model_name, best_auc)
+    logger.info("Chosen validation decision threshold: %.2f", threshold)
+    logger.info("Tuned validation metrics: %s", tuned_validation_metrics)
     logger.info("Final held-out test metrics: %s", test_metrics)
 
 
