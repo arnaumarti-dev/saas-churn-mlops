@@ -41,7 +41,7 @@ src/churn_mlops/api/main.py (FastAPI)
 
 Key production choices:
 - Uses `Pipeline` + `ColumnTransformer` to prevent leakage (fit transformations on train only).
-- Tracks every run in MLflow (`mlruns/`).
+- Tracks every run in MLflow (`mlflow.db`, a local SQLite database).
 - Saves confusion matrix and metrics artifacts.
 - Exposes prediction API with strict Pydantic request schema.
 - Central logging configuration.
@@ -56,7 +56,7 @@ Key production choices:
 ├── artifacts/                    # metrics JSON + confusion matrix plots
 ├── data/
 │   └── telco_churn.csv          # downloaded raw data
-├── mlruns/                      # MLflow tracking backend (local file store)
+├── mlflow.db                    # MLflow experiment tracking (SQLite database)
 ├── models/
 │   └── best_model.joblib        # persisted best model
 ├── scripts/
