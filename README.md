@@ -245,3 +245,31 @@ validation, validation after threshold tuning, and the held-out test split.
 Do not choose or readjust the threshold based on held-out test metrics;
 that would invalidate the final test as an unbiased check. Further product
 decisions would need intervention-cost analysis and monitoring on new data.
+
+
+## Interactive portfolio demo
+
+After creating the trained artifact (run \`make download-data && make train\`),
+start FastAPI with \`make run-api\` and open **http://localhost:8000/**.
+
+The landing page offers a Spanish-language interactive form with the complete
+set of 19 prediction inputs, illustrative customer profiles, the resulting
+estimated churn probability, and the **actual saved decision threshold**.
+The interface submits a JSON request to the existing \`POST /predict\` route,
+so its result uses the real trained model rather than mock predictions.
+
+- Open \`/docs\` for Swagger/OpenAPI and \`/health\` for the API health endpoint.
+- The app processes inputs on demand and the demo does not intentionally
+  persist them; do not enter real personal or sensitive customer records.
+- If you open the page before training, the server still serves the form but
+  prediction requests return HTTP 503 with instructions to train first.
+- \`make smoke-test\` validates the root page and model-backed API response.
+- **Not yet deployed publicly.** The Docker image does not bundle the trained
+  artifact (excluded from Git); for runtime predictions you must supply
+  \`models/best_model.joblib\` (e.g. with the existing Compose volume mount).
+  Choose a hosting provider and a secure model-artifact delivery method
+  before publishing an online version.
+
+This is a portfolio demonstration based on IBM Telco Customer Churn data,
+not a validated commercial retention tool. Its outputs should not drive
+automated decisions about individuals.
