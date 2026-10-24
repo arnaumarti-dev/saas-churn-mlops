@@ -113,7 +113,7 @@ def _page(title: str, body: str) -> HTMLResponse:
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         "<title>" + html.escape(title) + " · Churn Lab</title></head>"
         "<body><main><h1>" + html.escape(title) + "</h1>" + body
-        "</main></body></html>"
+        + "</main></body></html>"
     )
 
 
@@ -201,9 +201,11 @@ def _verify_id_token(cfg: LoginConfig, token: str, nonce: str) -> tuple[Principa
                 or not hmac.compare_digest(claims["nonce"], nonce)):
             raise jwt.InvalidTokenError("Invalid subject or nonce")
         return Principal(issuer=cfg.issuer, subject=subject), int(claims["exp"])
+    except jwt.PyJWKClientError as exc:
+        raise HTTPException(status_code=503, detail="Identity provider unavailable") from exc
     except jwt.InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail="Invalid identity token") from exc
-    except (jwt.PyJWKClientError, OSError, ValueError, RuntimeError) as exc:
+    except (OSError, ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=503, detail="Identity provider unavailable") from exc
 
 
