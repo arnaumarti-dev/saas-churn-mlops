@@ -40,7 +40,15 @@ def config(monkeypatch):
 
 
 def browser(subject):
-    client = TestClient(app, base_url="https://testserver", follow_redirects=False)
+    # Separate synthetic clients by IP: the ASGI production IP throttle is
+    # global to the app and should not mistake distinct test identities for
+    # one abusive client. Each synthetic browser stays under its own quota.
+    digest = hashlib.sha256(subject.encode()).digest()
+    source_ip = f"10.{digest[0]}.{digest[1]}.{digest[2]}"
+    client = TestClient(
+        app, base_url="https://testserver", follow_redirects=False,
+        client=(source_ip, 51000),
+    )
     cfg = login._login_config()
     client.cookies.set(
         login.SESSION_COOKIE,
