@@ -36,6 +36,11 @@ def main() -> None:
         health = client.get("/health")
         assert health.status_code == 200, health.text
 
+        landing = client.get("/")
+        assert landing.status_code == 200, landing.text
+        assert "text/html" in landing.headers["content-type"]
+        assert "Churn Lab" in landing.text
+
         prediction = client.post("/predict", json=payload)
         assert prediction.status_code == 200, prediction.text
         result = prediction.json()
