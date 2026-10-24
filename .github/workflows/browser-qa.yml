@@ -1,0 +1,70 @@
+name: Real-browser visual QA
+
+on:
+  pull_request:
+    paths:
+      - "src/churn_mlops/api/**"
+      - "tests/browser/**"
+      - ".github/workflows/browser-qa.yml"
+      - "Dockerfile.demo"
+      - "requirements*.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-visual:
+    name: Chromium responsive and interaction QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright test runner and browser
+        run: |
+          npm install --no-save @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Build self-contained test API
+        run: docker build -f Dockerfile.demo -t churn-qa:ci .
+      - name: Start local test API
+        run: |
+          docker run --rm -d --name churn-browser-qa -p 8000:8000 churn-qa:ci
+          python - <<'PY'
+          import time
+          from urllib.request import urlopen
+          for retry in range(45):
+              try:
+                  with urlopen("http://127.0.0.1:8000/health", timeout=4) as response:
+                      if response.status == 200:
+                          print("Test API is ready")
+                          break
+              except OSError:
+                  pass
+              time.sleep(2)
+          else:
+              raise SystemExit("Demo service did not become ready")
+          PY
+      - name: Run desktop tablet and mobile browser checks
+        run: |
+          mkdir -p test-results/visual-qa
+          npx playwright test --config tests/browser/playwright.config.cjs
+      - name: Upload QA screenshots, traces and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: churn-browser-visual-qa
+          path: |
+            test-results/visual-qa/
+            test-results/browser-output/
+            test-results/browser-report/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs churn-browser-qa || true
+      - name: Stop local test API
+        if: always()
+        run: docker stop churn-browser-qa || true
