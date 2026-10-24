@@ -141,9 +141,13 @@ def test_reject_bad_state_nonce_tampering_and_wrong_id_token(oidc, monkeypatch):
         bad_nonce = complete_login(client, oidc, monkeypatch, nonce_override="wrong")
         assert bad_nonce.status_code == 401
         query = login_started(client)
-        client.cookies.set(login.STATE_COOKIE, "tampered", domain="testserver", path="/")
-        bad_cookie = client.get("/saas/v3/auth/callback",
-                                params={"code": "code", "state": query["state"][0]})
+        # Explicit request header overrides the test client's existing
+        # host-only cookie; do not accidentally test a second valid cookie.
+        bad_cookie = client.get(
+            "/saas/v3/auth/callback",
+            params={"code": "code", "state": query["state"][0]},
+            headers={"Cookie": login.STATE_COOKIE + "=tampered"},
+        )
         assert bad_cookie.status_code == 401
 
 
