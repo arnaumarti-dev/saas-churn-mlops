@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse
 
 
 MAX_PREDICT_BODY = 16 * 1024
+MAX_BATCH_BODY = 256 * 1024
 PREDICTIONS_PER_MINUTE = 30
 MAX_RATE_LIMIT_IDENTITIES = 4096
 
@@ -105,7 +106,7 @@ class SecurityMiddleware:
                         if key == b"content-security-policy" and scope["path"] in {"/docs", "/redoc"}:
                             value = DOCS_CSP.encode("ascii")
                         headers.append((key, value))
-                if scope["path"] == "/predict":
+                if scope["path"] in {"/predict", "/predict/batch"}:
                     headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": headers}
             await send(message)
@@ -115,7 +116,8 @@ class SecurityMiddleware:
                 {"detail": detail}, status_code=code, headers=extra_headers
             )(scope, receive, secure_send)
 
-        if scope.get("path") == "/predict" and scope.get("method") == "POST":
+        if scope.get("path") in {"/predict", "/predict/batch"} and scope.get("method") == "POST":
+            body_limit = MAX_BATCH_BODY if scope["path"] == "/predict/batch" else MAX_PREDICT_BODY
             ip = (scope.get("client") or ("unknown", 0))[0]
             if not self.limiter.allow(ip):
                 await reject(429, "Too many predictions; try again shortly.", {"Retry-After": "60"})
@@ -133,7 +135,7 @@ class SecurityMiddleware:
                 await reject(400, "Invalid Content-Length.")
                 return
 
-            if declared_length > MAX_PREDICT_BODY:
+            if declared_length > body_limit:
                 await reject(413, "Prediction request too large.")
                 return
 
@@ -148,7 +150,7 @@ class SecurityMiddleware:
                     continue
                 body = message.get("body", b"")
                 total += len(body)
-                if total > MAX_PREDICT_BODY:
+                if total > body_limit:
                     await reject(413, "Prediction request too large.")
                     return
                 chunks.append(body)

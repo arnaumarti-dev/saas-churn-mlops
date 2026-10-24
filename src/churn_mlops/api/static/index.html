@@ -18,7 +18,11 @@
       <h1>Anticipa el <em>abandono</em> de clientes.</h1>
       <p>Explora cómo un modelo de Machine Learning estima el riesgo de baja de un cliente a partir de sus datos contractuales y de servicio.</p>
     </section>
-    <main class="layout">
+    <nav class="view-nav" aria-label="Modo de análisis">
+      <button class="view-tab active" type="button" id="tab-single" aria-controls="single-view" aria-selected="true">◈ Predicción individual</button>
+      <button class="view-tab" type="button" id="tab-batch" aria-controls="batch-view" aria-selected="false">▥ Analizar CSV y dashboard</button>
+    </nav>
+    <main class="layout" id="single-view">
       <section class="panel" aria-labelledby="form-title">
         <h2 id="form-title">Configura un perfil</h2>
         <p class="sub">Puedes probar los ejemplos o editar los valores. No se guardan los datos introducidos en esta página.</p>
@@ -77,6 +81,53 @@
         <p class="note">Proyecto educativo con datos IBM Telco Customer Churn. Este prototipo no es una herramienta comercial validada y no ofrece recomendaciones individualizadas.</p>
       </aside>
     </main>
+    <section id="batch-view" hidden aria-labelledby="batch-title">
+      <div class="layout batch-layout">
+        <section class="panel">
+          <div class="eyebrow">Análisis de cohortes · Versión demostrativa</div>
+          <h2 id="batch-title">Analiza varios clientes a la vez</h2>
+          <p class="sub">Importa un CSV con las 19 columnas del modelo, o prueba los datos completamente ficticios. Hasta 200 filas por análisis.</p>
+          <div class="batch-actions">
+            <button type="button" class="preset" id="batch-example">↗ Usar 12 clientes ficticios</button>
+            <button type="button" class="preset" id="batch-download">↓ Descargar CSV de ejemplo</button>
+          </div>
+          <label class="upload-label" for="batch-file"><span>Archivo CSV (UTF-8; columnas del modelo)</span>
+            <input type="file" id="batch-file" accept=".csv,text/csv" aria-describedby="batch-privacy">
+          </label>
+          <div class="batch-preview" id="batch-preview" aria-live="polite">Sin datos cargados. Utiliza los ejemplos o selecciona un CSV.</div>
+          <button class="submit" type="button" id="batch-submit" disabled>Analizar clientes →</button>
+          <div class="notice" id="batch-error" role="alert" hidden></div>
+          <p class="note" id="batch-privacy">Privacidad: esta demo no guarda los perfiles en una base de datos, pero se envían temporalmente al servidor para calcular la predicción. <strong>No utilices datos personales ni información comercial real.</strong> No incluye cuentas ni permisos de empresa.</p>
+        </section>
+        <aside class="panel result batch-summary" aria-label="Métricas del lote">
+          <h2>Panel de riesgo</h2>
+          <p class="sub">Métricas agregadas generadas por el modelo. No representan bajas observadas.</p>
+          <div class="result-empty" id="batch-empty"><div class="symbol" aria-hidden="true">▥</div><strong>El dashboard aparecerá aquí</strong><span>Analiza los clientes ficticios para visualizar su riesgo.</span></div>
+          <div id="batch-metrics" hidden aria-live="polite">
+            <div class="metric-boxes">
+              <div class="metric-box"><span>Clientes analizados</span><strong id="batch-total">—</strong></div>
+              <div class="metric-box"><span>Por encima del umbral</span><strong id="batch-high">—</strong></div>
+              <div class="metric-box"><span>Probabilidad media</span><strong id="batch-average">—</strong></div>
+              <div class="metric-box"><span>Umbral aplicado</span><strong id="batch-threshold">—</strong></div>
+            </div>
+            <h3>Distribución de clasificaciones</h3>
+            <div class="stacked-bar" role="img" id="batch-chart" aria-label="Distribución del riesgo">
+              <div class="stacked-high" id="chart-high"></div><div class="stacked-low" id="chart-low"></div>
+            </div>
+            <div class="chart-legend"><span>● Por encima: <b id="legend-high">0</b></span><span>● Por debajo: <b id="legend-low">0</b></span></div>
+            <p class="note">Cuotas mensuales de perfiles clasificados en riesgo: <strong id="batch-revenue">—</strong>. Es una suma de cuotas, no una previsión de ingresos perdidos.</p>
+          </div>
+        </aside>
+      </div>
+      <section class="panel batch-results" id="batch-results" hidden aria-label="Predicciones por fila">
+        <h2>Detalle de predicciones</h2>
+        <p class="sub">Filas identificadas por su número en el archivo. La API no devuelve los datos originales de los clientes.</p>
+        <div class="table-scroll">
+          <table><thead><tr><th scope="col">Fila CSV</th><th scope="col">Probabilidad</th><th scope="col">Clasificación</th></tr></thead>
+          <tbody id="batch-table"></tbody></table>
+        </div>
+      </section>
+    </section>
     <footer>Construido con FastAPI, scikit-learn, MLflow y Docker · <a href="/docs">API interactiva</a></footer>
   </div>
   <script src="/assets/demo.js" defer></script>

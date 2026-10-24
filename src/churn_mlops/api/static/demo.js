@@ -98,3 +98,232 @@
         submit.textContent = "Calcular riesgo de abandono →";
       }
     });
+
+
+    // Batch dashboard: all examples are synthetic and nothing is persisted.
+    const csvColumns = [
+      "gender", "SeniorCitizen", "Partner", "Dependents", "tenure",
+      "PhoneService", "MultipleLines", "InternetService", "OnlineSecurity",
+      "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV",
+      "StreamingMovies", "Contract", "PaperlessBilling", "PaymentMethod",
+      "MonthlyCharges", "TotalCharges"
+    ];
+    const numericColumns = ["SeniorCitizen", "tenure", "MonthlyCharges", "TotalCharges"];
+    const batchMaxRows = 200;
+    const batchMaxFileBytes = 256 * 1024;
+    const batchFile = document.getElementById("batch-file");
+    const batchError = document.getElementById("batch-error");
+    const batchSubmit = document.getElementById("batch-submit");
+    let batchCustomers = [];
+
+    function viewTab(which) {
+      const isBatch = which === "batch";
+      document.getElementById("single-view").hidden = isBatch;
+      document.getElementById("batch-view").hidden = !isBatch;
+      for (const name of ["single", "batch"]) {
+        const tab = document.getElementById("tab-" + name);
+        const active = name === which;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      }
+    }
+    document.getElementById("tab-single").addEventListener("click", () => viewTab("single"));
+    document.getElementById("tab-batch").addEventListener("click", () => viewTab("batch"));
+
+    function fakeCustomers() {
+      const baseline = Object.fromEntries(new FormData(form).entries());
+      const data = [];
+      for (let i = 0; i < 12; i += 1) {
+        const risky = i < 6;
+        const override = risky ? samples.risky : samples.stable;
+        const customer = { ...baseline, ...override };
+        customer.tenure = risky ? 1 + i * 2 : 36 + i * 3;
+        customer.MonthlyCharges = risky ? 89.5 + i : 61 + i * 2;
+        customer.TotalCharges = Number((customer.MonthlyCharges * customer.tenure).toFixed(2));
+        customer.SeniorCitizen = i % 3 === 0 ? 1 : 0;
+        customer.gender = i % 2 === 0 ? "Female" : "Male";
+        data.push(customer);
+      }
+      return data;
+    }
+
+    function setBatchCustomers(customers, description) {
+      batchCustomers = customers;
+      batchSubmit.disabled = customers.length === 0;
+      batchError.hidden = true;
+      document.getElementById("batch-preview").textContent = description;
+      document.getElementById("batch-empty").hidden = false;
+      document.getElementById("batch-metrics").hidden = true;
+      document.getElementById("batch-results").hidden = true;
+    }
+
+    function parseCSV(text) {
+      // RFC-4180-style quoted cells and escaped double quotes, including newlines.
+      const rows = [];
+      let cells = [];
+      let cell = "";
+      let quoted = false;
+      let closedQuote = false;
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        if (quoted) {
+          if (char === '"') {
+            if (text[i + 1] === '"') { cell += '"'; i += 1; }
+            else { quoted = false; closedQuote = true; }
+          } else {
+            cell += char;
+          }
+        } else if (char === '"') {
+          if (cell.length || closedQuote) throw new Error("Las comillas del CSV no son válidas.");
+          quoted = true;
+        } else if (char === "," || char === "\n") {
+          cells.push(cell);
+          cell = "";
+          closedQuote = false;
+          if (char === "\n") {
+            if (cells.some(value => value.trim() !== "")) rows.push(cells);
+            cells = [];
+          }
+        } else if (char === "\r") {
+          continue;
+        } else {
+          if (closedQuote && char !== " ") throw new Error("Hay caracteres tras una celda entrecomillada.");
+          cell += char;
+        }
+      }
+      if (quoted) throw new Error("El CSV contiene comillas sin cerrar.");
+      cells.push(cell);
+      if (cells.some(value => value.trim() !== "")) rows.push(cells);
+      return rows;
+    }
+
+    function customersFromCSV(text) {
+      const rows = parseCSV(text.replace(/^\uFEFF/, ""));
+      if (rows.length < 2) throw new Error("El archivo debe incluir cabecera y al menos un cliente.");
+      const headers = rows[0].map(value => value.trim());
+      if (new Set(headers).size !== headers.length ||
+          headers.length !== csvColumns.length ||
+          csvColumns.some(column => !headers.includes(column))) {
+        throw new Error("Las columnas no coinciden con el CSV de ejemplo (19 columnas, sin identificadores ni datos personales).");
+      }
+      if (rows.length - 1 > batchMaxRows) throw new Error("Límite de 200 clientes por análisis.");
+      return rows.slice(1).map((cells, index) => {
+        if (cells.length !== headers.length) throw new Error("La fila " + (index + 2) + " tiene un número incorrecto de columnas.");
+        const customer = {};
+        headers.forEach((name, columnIndex) => {
+          const raw = cells[columnIndex].trim();
+          if (raw === "") throw new Error("Campo vacío en la fila " + (index + 2) + ": " + name);
+          if (numericColumns.includes(name)) {
+            const parsed = Number(raw);
+            if (!Number.isFinite(parsed)) throw new Error("Número no válido en fila " + (index + 2) + ": " + name);
+            customer[name] = parsed;
+          } else {
+            customer[name] = raw;
+          }
+        });
+        return customer;
+      });
+    }
+
+    function csvEscape(value) {
+      const text = String(value);
+      return /[",\r\n]/.test(text) ? '"' + text.replaceAll('"', '""') + '"' : text;
+    }
+
+    document.getElementById("batch-example").addEventListener("click", () => {
+      batchFile.value = "";
+      setBatchCustomers(fakeCustomers(), "12 clientes de prueba ficticios cargados. Ninguno corresponde a una persona real.");
+    });
+
+    document.getElementById("batch-download").addEventListener("click", () => {
+      const rows = fakeCustomers();
+      const lines = [csvColumns.join(",")];
+      for (const row of rows) lines.push(csvColumns.map(name => csvEscape(row[name])).join(","));
+      const file = new Blob(["\uFEFF", lines.join("\r\n") + "\r\n"], { type: "text/csv;charset=utf-8" });
+      const href = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = "churn-clientes-ficticios.csv";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    });
+
+    batchFile.addEventListener("change", async () => {
+      const file = batchFile.files && batchFile.files[0];
+      if (!file) return;
+      try {
+        if (file.size > batchMaxFileBytes) throw new Error("El CSV no puede superar 256 KiB.");
+        const customers = customersFromCSV(await file.text());
+        setBatchCustomers(customers, customers.length + " filas importadas de CSV, listas para analizar.");
+      } catch (problem) {
+        setBatchCustomers([], "Archivo no cargado.");
+        batchError.textContent = problem instanceof Error ? problem.message : "No se pudo leer el CSV.";
+        batchError.hidden = false;
+      }
+    });
+
+    function formatPercent(number) {
+      return (Number(number) * 100).toFixed(1).replace(".", ",") + " %";
+    }
+
+    batchSubmit.addEventListener("click", async () => {
+      if (!batchCustomers.length) return;
+      batchError.hidden = true;
+      batchSubmit.disabled = true;
+      batchSubmit.textContent = "Analizando clientes…";
+      try {
+        const response = await fetch("/predict/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customers: batchCustomers })
+        });
+        if (!response.ok) {
+          if (response.status === 429) throw new Error("Límite de solicitudes alcanzado. Prueba dentro de un minuto.");
+          if (response.status === 413) throw new Error("El lote es demasiado grande. Reduce el tamaño.");
+          throw new Error("Error de la API al analizar clientes (HTTP " + response.status + "). Revisa el archivo.");
+        }
+        const result = await response.json();
+        if (!Array.isArray(result.predictions) || result.predictions.length !== batchCustomers.length ||
+            result.summary.total_customers !== batchCustomers.length) {
+          throw new Error("Respuesta inesperada del modelo.");
+        }
+        const summary = result.summary;
+        document.getElementById("batch-total").textContent = String(summary.total_customers);
+        document.getElementById("batch-high").textContent = String(summary.high_risk_customers);
+        document.getElementById("batch-average").textContent = formatPercent(summary.average_churn_probability);
+        document.getElementById("batch-threshold").textContent = formatPercent(summary.decision_threshold);
+        document.getElementById("batch-revenue").textContent =
+          new Intl.NumberFormat("es-ES", { style: "currency", currency: "USD" }).format(summary.high_risk_monthly_charges);
+        const highFraction = 100 * summary.high_risk_customers / summary.total_customers;
+        document.getElementById("chart-high").style.width = highFraction + "%";
+        document.getElementById("chart-low").style.width = (100 - highFraction) + "%";
+        document.getElementById("batch-chart").setAttribute("aria-label",
+          summary.high_risk_customers + " por encima del umbral y " + summary.low_risk_customers + " por debajo");
+        document.getElementById("legend-high").textContent = String(summary.high_risk_customers);
+        document.getElementById("legend-low").textContent = String(summary.low_risk_customers);
+
+        const table = document.getElementById("batch-table");
+        table.replaceChildren();
+        result.predictions.forEach((prediction, index) => {
+          const row = document.createElement("tr");
+          const number = document.createElement("td");
+          const probability = document.createElement("td");
+          const status = document.createElement("td");
+          number.textContent = String(index + 2);
+          probability.textContent = formatPercent(prediction.churn_probability);
+          status.textContent = prediction.churn_prediction === 1 ? "Sobre el umbral" : "Bajo el umbral";
+          status.className = prediction.churn_prediction === 1 ? "risk-high" : "risk-low";
+          row.append(number, probability, status);
+          table.append(row);
+        });
+        document.getElementById("batch-empty").hidden = true;
+        document.getElementById("batch-metrics").hidden = false;
+        document.getElementById("batch-results").hidden = false;
+      } catch (problem) {
+        batchError.textContent = problem instanceof Error ? problem.message : "Error inesperado.";
+        batchError.hidden = false;
+      } finally {
+        batchSubmit.disabled = batchCustomers.length === 0;
+        batchSubmit.textContent = "Analizar clientes →";
+      }
+    });

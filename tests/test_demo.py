@@ -48,3 +48,22 @@ def test_static_asset_security_policy() -> None:
     assert 'fetch("/predict"' in script.text
     assert "Content-Security-Policy".lower() in script.headers
     assert "script-src 'self'" in script.headers["Content-Security-Policy"]
+
+
+def test_batch_dashboard_contains_import_controls_and_metrics() -> None:
+    client = TestClient(app)
+    page = client.get("/")
+    assert page.status_code == 200
+    for control in (
+        'id="tab-batch"', 'id="batch-view"', 'id="batch-file"',
+        'id="batch-submit"', 'id="batch-chart"', 'id="batch-table"',
+        'id="batch-privacy"',
+    ):
+        assert control in page.text
+
+    script = client.get("/assets/demo.js")
+    assert script.status_code == 200
+    assert 'fetch("/predict/batch"' in script.text
+    assert "batchMaxRows = 200" in script.text
+    assert "customersFromCSV" in script.text
+    assert "textContent" in script.text

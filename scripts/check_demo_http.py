@@ -87,6 +87,26 @@ def main() -> None:
     threshold = prediction["decision_threshold"]
     assert 0 <= p <= 1 and 0 < threshold < 1
     assert prediction["churn_prediction"] == int(p >= threshold)
+    # A real, vectorized multi-customer request using the same trained artifact.
+    stable = {
+        **SAMPLE, "Contract": "Two year", "tenure": 60,
+        "MonthlyCharges": 50.0, "TotalCharges": 3000.0,
+    }
+    bulk_request = Request(
+        BASE_URL + "/predict/batch",
+        data=json.dumps({"customers": [SAMPLE, stable]}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    bulk_status, _, bulk_body = fetch(bulk_request)
+    assert bulk_status == 200, bulk_body
+    bulk = json.loads(bulk_body)
+    assert len(bulk["predictions"]) == 2
+    assert bulk["summary"]["total_customers"] == 2
+    assert 0 <= bulk["summary"]["average_churn_probability"] <= 1
+    assert all(0 <= item["churn_probability"] <= 1 for item in bulk["predictions"])
+    print(f"Batch demo is operational: {bulk['summary']}")
+
     print(f"Self-contained demo is operational: {prediction}")
 
 

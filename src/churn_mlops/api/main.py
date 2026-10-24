@@ -7,14 +7,20 @@ from fastapi.staticfiles import StaticFiles
 
 from churn_mlops.api.security import SecurityMiddleware
 
-from churn_mlops.inference import load_model, predict
+from churn_mlops.inference import load_model, predict, predict_many
 from churn_mlops.logging_config import configure_logging
-from churn_mlops.schemas import ChurnInput, ChurnPrediction
+from churn_mlops.schemas import (
+    BatchPredictionRequest,
+    BatchPredictionResponse,
+    BatchSummary,
+    ChurnInput,
+    ChurnPrediction,
+)
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SaaS Churn Prediction API", version="1.1.0")
+app = FastAPI(title="SaaS Churn Prediction API", version="1.2.0")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 DEMO_HTML = STATIC_DIR / "index.html"
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
@@ -45,6 +51,46 @@ def predict_churn(payload: ChurnInput) -> ChurnPrediction:
     return ChurnPrediction(
         churn_probability=probability, churn_prediction=label, decision_threshold=threshold
     )
+
+
+@app.post("/predict/batch", response_model=BatchPredictionResponse)
+def predict_batch(payload: BatchPredictionRequest) -> BatchPredictionResponse:
+    """Evaluate up to 200 demonstrative customer profiles in one model call.
+
+    Inputs and outputs are processed in memory only; no CSV or customer rows
+    are saved by this application.
+    """
+    if app.state.model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    customers = [customer.model_dump() for customer in payload.customers]
+    values = predict_many(app.state.model, customers)
+    predictions = [
+        ChurnPrediction(
+            churn_probability=probability,
+            churn_prediction=label,
+            decision_threshold=threshold,
+        )
+        for probability, label, threshold in values
+    ]
+    high_risk = sum(item.churn_prediction for item in predictions)
+    high_risk_charges = sum(
+        customer.MonthlyCharges
+        for customer, prediction in zip(payload.customers, predictions)
+        if prediction.churn_prediction == 1
+    )
+    summary = BatchSummary(
+        total_customers=len(predictions),
+        high_risk_customers=high_risk,
+        low_risk_customers=len(predictions) - high_risk,
+        average_churn_probability=(
+            sum(item.churn_probability for item in predictions) / len(predictions)
+        ),
+        decision_threshold=predictions[0].decision_threshold,
+        high_risk_monthly_charges=round(high_risk_charges, 2),
+    )
+    return BatchPredictionResponse(predictions=predictions, summary=summary)
+
 
 @app.get("/")
 def root():
