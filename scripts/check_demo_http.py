@@ -6,6 +6,7 @@ No local dataset, API dependencies, or model artifact are required.
 import json
 import os
 import time
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
@@ -115,6 +116,17 @@ def main() -> None:
     assert 0 <= bulk["summary"]["average_churn_probability"] <= 1
     assert all(0 <= item["churn_probability"] <= 1 for item in bulk["predictions"])
     print(f"Batch demo is operational: {bulk['summary']}")
+
+    # Production demo must never expose the experimental tenant prototype.
+    disabled = Request(
+        BASE_URL + "/saas/v1/tenants/aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa/me"
+    )
+    try:
+        fetch(disabled)
+        raise AssertionError("The disabled SaaS prototype unexpectedly responded 200")
+    except HTTPError as error:
+        assert error.code == 404, f"Unexpected prototype route status: {error.code}"
+        assert error.headers.get("cache-control") == "no-store"
 
     print(f"Self-contained demo is operational: {prediction}")
 

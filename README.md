@@ -477,3 +477,28 @@ deploying, manually inspect at 375 px, 620 px and desktop widths; navigate the
 tablist using only the keyboard, upload the example CSV, test cancelled and
 empty analyses, verify focus indicators and try 200% text zoom. Continue to use
 synthetic profiles only.
+
+
+## Next SaaS step: tenant isolation prototype (not enabled)
+
+An **explicitly opt-in, disabled-by-default** developer-only security prototype
+adds tenant-scoped `/saas/v1/tenants/{tenant_uuid}/me` and
+`/saas/v1/tenants/{tenant_uuid}/predict/batch` endpoints. Its purpose is to
+test isolated membership, authorization and permission failures before
+building real customer login. **The public Churn Lab demo remains unchanged.**
+
+The sandbox accepts only short-lived, server-provisioned random bearer tokens
+stored as SHA-256 hashes in private environment configuration. It verifies
+company membership and role before serving an in-memory result; cross-company
+lookups fail with 404. Viewer-only roles cannot run predictions.
+There is **no database, no user signup, no persistent profile storage,
+no browser authentication and no access to real customer data**.
+
+The prototype must **not be enabled on public Render or considered
+production-grade authentication**. Before an actual SaaS launch, replace it
+with a managed OIDC provider, persistent role/membership management,
+PostgreSQL tenant-scoped storage with RLS, GDPR review, key lifecycle,
+auditing and production security testing.
+
+Read the threat model, test configuration and release gates in
+[docs/saas-auth-tenant-architecture.md](docs/saas-auth-tenant-architecture.md).

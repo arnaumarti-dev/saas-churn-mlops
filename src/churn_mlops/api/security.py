@@ -5,6 +5,7 @@ service would need shared storage or an edge gateway for globally enforced
 limits across replicas and restarts.
 """
 from collections import deque
+import re
 from threading import Lock
 from time import monotonic
 
@@ -15,6 +16,7 @@ MAX_PREDICT_BODY = 16 * 1024
 MAX_BATCH_BODY = 256 * 1024
 PREDICTIONS_PER_MINUTE = 30
 MAX_RATE_LIMIT_IDENTITIES = 4096
+TENANT_BATCH_PATH = re.compile(r"^/saas/v1/tenants/[^/]+/predict/batch$")
 
 CSP = (
     "default-src 'none'; "
@@ -106,7 +108,7 @@ class SecurityMiddleware:
                         if key == b"content-security-policy" and scope["path"] in {"/docs", "/redoc"}:
                             value = DOCS_CSP.encode("ascii")
                         headers.append((key, value))
-                if scope["path"] in {"/predict", "/predict/batch"}:
+                if scope["path"] in {"/predict", "/predict/batch"} or scope["path"].startswith("/saas/v1/"):
                     headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": headers}
             await send(message)
@@ -116,8 +118,9 @@ class SecurityMiddleware:
                 {"detail": detail}, status_code=code, headers=extra_headers
             )(scope, receive, secure_send)
 
-        if scope.get("path") in {"/predict", "/predict/batch"} and scope.get("method") == "POST":
-            body_limit = MAX_BATCH_BODY if scope["path"] == "/predict/batch" else MAX_PREDICT_BODY
+        is_tenant_batch = bool(TENANT_BATCH_PATH.fullmatch(scope.get("path", "")))
+        if (scope.get("path") in {"/predict", "/predict/batch"} or is_tenant_batch) and scope.get("method") == "POST":
+            body_limit = MAX_BATCH_BODY if (scope["path"] == "/predict/batch" or is_tenant_batch) else MAX_PREDICT_BODY
             ip = (scope.get("client") or ("unknown", 0))[0]
             if not self.limiter.allow(ip):
                 await reject(429, "Too many predictions; try again shortly.", {"Retry-After": "60"})
