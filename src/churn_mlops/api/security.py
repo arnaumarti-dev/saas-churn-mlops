@@ -28,6 +28,20 @@ CSP = (
     "object-src 'none'"
 )
 
+# FastAPI's built-in Swagger UI loads scripts/styles from a CDN and uses
+# inline initialization. Restrict that exception to /docs and /redoc only.
+DOCS_CSP = (
+    "default-src 'none'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "connect-src 'self'; "
+    "img-src 'self' data: https://fastapi.tiangolo.com; "
+    "font-src 'self' https://cdn.jsdelivr.net; "
+    "frame-ancestors 'none'; "
+    "base-uri 'none'; "
+    "object-src 'none'"
+)
+
 SECURITY_HEADERS = [
     (b"content-security-policy", CSP.encode("ascii")),
     (b"x-content-type-options", b"nosniff"),
@@ -88,6 +102,8 @@ class SecurityMiddleware:
                 existing = {key.lower() for key, _ in headers}
                 for key, value in SECURITY_HEADERS:
                     if key not in existing:
+                        if key == b"content-security-policy" and scope["path"] in {"/docs", "/redoc"}:
+                            value = DOCS_CSP.encode("ascii")
                         headers.append((key, value))
                 if scope["path"] == "/predict":
                     headers.append((b"cache-control", b"no-store"))
