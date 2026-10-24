@@ -1,6 +1,8 @@
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 
 from churn_mlops.inference import load_model, predict
 from churn_mlops.logging_config import configure_logging
@@ -9,7 +11,8 @@ from churn_mlops.schemas import ChurnInput, ChurnPrediction
 configure_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SaaS Churn Prediction API", version="1.0.0")
+app = FastAPI(title="SaaS Churn Prediction API", version="1.1.0")
+DEMO_HTML = Path(__file__).resolve().parent / "static" / "index.html"
 app.state.model = None
 
 
@@ -39,4 +42,5 @@ def predict_churn(payload: ChurnInput) -> ChurnPrediction:
 
 @app.get("/")
 def root():
-    return {"message": "Churn MLOps API. See /docs for Swagger UI.", "docs": "/docs", "health": "/health"}
+    """Serve a self-contained interactive portfolio demo from this API."""
+    return FileResponse(DEMO_HTML, media_type="text/html")
