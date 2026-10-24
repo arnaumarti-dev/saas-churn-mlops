@@ -374,3 +374,53 @@ performed by this repository change.
 This does not establish that the service is free of CVEs, denial-of-service
 vectors, or new supply-chain vulnerabilities. For serious external traffic,
 add provider-side/WAF rate limiting, request monitoring and operational alerts.
+
+
+## Batch predictions and dashboard (demo)
+
+The home page now offers two modes:
+
+- **Individual customer:** the existing interactive calculator using `POST /predict`.
+- **CSV & dashboard:** either generate 12 **synthetic** customer profiles or
+  import a small UTF-8 CSV containing exactly the 19 model input columns.
+  Column order is arbitrary, but the headers must match the example exactly;
+  optional customer identifiers or other unknown columns are rejected. The
+  interface uses a quote-aware CSV parser and displays aggregated classification
+  counts, mean predicted probability, threshold, monthly charges **associated
+  with high-risk profiles** and per-row scores. The monthly amount is **not**
+  a prediction of lost revenue.
+
+The "Download sample CSV" button generates synthetic data in the browser.
+On the server, `POST /predict/batch` accepts up to **200 profiles**, in the
+same schema as `POST /predict`:
+
+```json
+{
+  "customers": [
+    {
+      "gender": "Female", "SeniorCitizen": 0, "Partner": "No",
+      "Dependents": "No", "tenure": 2, "PhoneService": "Yes",
+      "MultipleLines": "No", "InternetService": "Fiber optic",
+      "OnlineSecurity": "No", "OnlineBackup": "No",
+      "DeviceProtection": "No", "TechSupport": "No",
+      "StreamingTV": "No", "StreamingMovies": "No",
+      "Contract": "Month-to-month", "PaperlessBilling": "Yes",
+      "PaymentMethod": "Electronic check", "MonthlyCharges": 89.50,
+      "TotalCharges": 179.0
+    }
+  ]
+}
+```
+
+The response contains `predictions` in input order and an aggregated
+`summary`. The endpoint evaluates all rows in one vectorized model call,
+rejects requests over **256 KiB**, and shares the existing rate limiter.
+It does not persist the submitted profiles or echo them in its responses.
+The original 16 KiB `/predict` limit remains unchanged.
+
+**Privacy and suitability:** do not submit real customer information,
+identifiers or commercially sensitive records to this public educational demo.
+The application does not include accounts, per-tenant isolation, storage,
+retention policies or an independently validated business risk model.
+Charts represent predictions and classifications, **not measured customer
+outcomes**.
