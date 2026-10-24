@@ -6,7 +6,6 @@ No local dataset, API dependencies, or model artifact are required.
 import json
 import os
 import time
-from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
@@ -39,17 +38,31 @@ def fetch(request: Request) -> tuple[int, str, bytes]:
         return response.status, response.headers.get("content-type", ""), response.read()
 
 
-def main() -> None:
-    for attempt in range(30):
+def wait_for_health(base_url: str = BASE_URL, attempts: int = 30, delay: float = 2) -> None:
+    """Wait for startup, including transient socket resets during ASGI initialization."""
+    if attempts < 1:
+        raise ValueError("attempts must be positive")
+    last_error = "no response"
+    for attempt in range(attempts):
         try:
-            status, _, _ = fetch(Request(BASE_URL + "/health"))
+            status, _, _ = fetch(Request(base_url + "/health"))
             if status == 200:
-                break
-        except (URLError, TimeoutError):
-            pass
-        time.sleep(2)
-    else:
-        raise AssertionError(f"Demo API did not become healthy at {BASE_URL}")
+                return
+            last_error = f"HTTP {status}"
+        except OSError as exc:
+            # urllib URLError and connection resets are both OSError descendants.
+            # Docker can accept a socket before Uvicorn is ready to answer.
+            last_error = f"{type(exc).__name__}: {exc}"
+        if attempt < attempts - 1:
+            time.sleep(delay)
+    raise AssertionError(
+        f"Demo API did not become healthy at {base_url} "
+        f"after {attempts} attempts (last: {last_error})"
+    )
+
+
+def main() -> None:
+    wait_for_health()
 
     status, content_type, html = fetch(Request(BASE_URL + "/"))
     assert status == 200
