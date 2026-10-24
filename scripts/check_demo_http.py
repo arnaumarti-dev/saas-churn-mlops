@@ -139,6 +139,20 @@ def main() -> None:
         assert error.code == 404, f"Unexpected OIDC staging status: {error.code}"
         assert error.headers.get("cache-control") == "no-store"
 
+    # Browser SSO and organization selector are staging-only and must stay off
+    # in the public Docker image even without optional identity dependencies.
+    for endpoint in (
+        "/saas/v3/login",
+        "/saas/v3/auth/start",
+        "/saas/v3/organizations",
+    ):
+        try:
+            fetch(Request(BASE_URL + endpoint))
+            raise AssertionError(f"Private SSO endpoint unexpectedly available: {endpoint}")
+        except HTTPError as error:
+            assert error.code == 404, (endpoint, error.code)
+            assert error.headers.get("cache-control") == "no-store"
+
     print(f"Self-contained demo is operational: {prediction}")
 
 
