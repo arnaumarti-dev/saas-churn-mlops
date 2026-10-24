@@ -108,7 +108,7 @@ class SecurityMiddleware:
                         if key == b"content-security-policy" and scope["path"] in {"/docs", "/redoc"}:
                             value = DOCS_CSP.encode("ascii")
                         headers.append((key, value))
-                if scope["path"] in {"/predict", "/predict/batch"} or scope["path"].startswith("/saas/v1/") or scope["path"].startswith("/saas/v2/"):
+                if scope["path"] in {"/predict", "/predict/batch"} or scope["path"].startswith("/saas/v1/") or scope["path"].startswith("/saas/v2/") or scope["path"].startswith("/saas/v3/"):
                     headers.append((b"cache-control", b"no-store"))
                 message = {**message, "headers": headers}
             await send(message)
@@ -117,6 +117,14 @@ class SecurityMiddleware:
             await JSONResponse(
                 {"detail": detail}, status_code=code, headers=extra_headers
             )(scope, receive, secure_send)
+
+        # Protect the browser login initiation/callback from automated floods.
+        # Like the demo prediction limiter this is only per-process best-effort.
+        if scope.get("path") in {"/saas/v3/auth/start", "/saas/v3/auth/callback"}:
+            ip = (scope.get("client") or ("unknown", 0))[0]
+            if not self.limiter.allow(ip):
+                await reject(429, "Too many requests; try again shortly.", {"Retry-After": "60"})
+                return
 
         is_tenant_batch = bool(TENANT_BATCH_PATH.fullmatch(scope.get("path", "")))
         if (scope.get("path") in {"/predict", "/predict/batch"} or is_tenant_batch) and scope.get("method") == "POST":

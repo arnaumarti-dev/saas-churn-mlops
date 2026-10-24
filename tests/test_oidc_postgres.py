@@ -179,7 +179,16 @@ def test_real_postgres_membership_and_rls(identity, monkeypatch):
                           set_config('app.oidc_subject', %s, true)""",
                 (str(tenant_a), ISSUER, "oidc-bob"),
             )
-            assert conn.execute("SELECT count(*) FROM saas.memberships").fetchone()[0] == 0
+            # The selector may see Bob's OWN membership for company B,
+            # but it must not return Alice's membership for company A.
+            assert conn.execute(
+                "SELECT count(*) FROM saas.memberships WHERE tenant_id = %s",
+                (tenant_a,),
+            ).fetchone()[0] == 0
+            assert conn.execute(
+                "SELECT count(*) FROM saas.memberships WHERE tenant_id = %s",
+                (tenant_b,),
+            ).fetchone()[0] == 1
 
     with psycopg.connect(app_dsn) as conn:
         with conn.transaction():
