@@ -5,6 +5,7 @@ from pathlib import Path
 import joblib
 import matplotlib.pyplot as plt
 import mlflow
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
@@ -13,6 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     confusion_matrix,
     f1_score,
+    fbeta_score,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -72,19 +74,57 @@ def build_models(preprocessor: ColumnTransformer) -> dict[str, Pipeline]:
     return {"logistic_regression": baseline, "xgboost": advanced}
 
 
-def evaluate_model(model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> dict:
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1]
+def evaluate_probabilities(y_true: pd.Series, probabilities, threshold: float = 0.5) -> dict:
+    """Evaluate a fixed threshold without fitting or selecting on test data."""
+    if not 0 < threshold < 1:
+        raise ValueError("Decision threshold must be strictly between 0 and 1.")
+    probabilities = np.asarray(probabilities, dtype=float)
+    predictions = (probabilities >= threshold).astype(int)
 
-    metrics = {
-        "roc_auc": roc_auc_score(y_test, y_prob),
-        "precision": precision_score(y_test, y_pred),
-        "recall": recall_score(y_test, y_pred),
-        "f1": f1_score(y_test, y_pred),
+    return {
+        "roc_auc": float(roc_auc_score(y_true, probabilities)),
+        "precision": float(precision_score(y_true, predictions, zero_division=0)),
+        "recall": float(recall_score(y_true, predictions, zero_division=0)),
+        "f1": float(f1_score(y_true, predictions, zero_division=0)),
+        "f2": float(fbeta_score(y_true, predictions, beta=2, zero_division=0)),
+        "decision_threshold": float(threshold),
+        "confusion_matrix": confusion_matrix(y_true, predictions, labels=[0, 1]).tolist(),
     }
-    cm = confusion_matrix(y_test, y_pred)
-    metrics["confusion_matrix"] = cm.tolist()
-    return metrics
+
+
+def evaluate_model(model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series, threshold: float = 0.5) -> dict:
+    return evaluate_probabilities(y_test, model.predict_proba(X_test)[:, 1], threshold)
+
+
+def select_decision_threshold(
+    model: Pipeline, X_val: pd.DataFrame, y_val: pd.Series, min_precision: float = 0.55
+) -> tuple[float, dict]:
+    """Tune an F2-oriented decision threshold using validation data ONLY.
+
+    A provisional 55% validation precision floor limits false positives.
+    The floor is a project assumption, NOT an optimized business cost.
+    """
+    if not 0 < min_precision <= 1:
+        raise ValueError("min_precision must be in (0, 1].")
+
+    probabilities = model.predict_proba(X_val)[:, 1]
+    eligible = []
+    for percent in range(15, 86):
+        threshold = percent / 100
+        metrics = evaluate_probabilities(y_val, probabilities, threshold)
+        if metrics["precision"] >= min_precision:
+            eligible.append((threshold, metrics))
+
+    if not eligible:
+        logger.warning("No validation threshold meets precision floor; using 0.50.")
+        threshold = 0.5
+        return threshold, evaluate_probabilities(y_val, probabilities, threshold)
+
+    # Favor high F2 (recall-weighted), then recall, then closeness to 0.50.
+    threshold, metrics = max(
+        eligible, key=lambda item: (item[1]["f2"], item[1]["recall"], -abs(item[0] - 0.5))
+    )
+    return threshold, metrics
 
 
 def save_confusion_matrix(cm: list[list[int]], output_path: Path) -> None:
@@ -101,7 +141,7 @@ def save_confusion_matrix(cm: list[list[int]], output_path: Path) -> None:
 
 def log_and_save(model_name: str, model: Pipeline, metrics: dict, split: str = "validation") -> None:
     """Log metrics with the split name to distinguish selection from final testing."""
-    if split not in {"validation", "test"}:
+    if split not in {"validation", "validation_tuned", "test"}:
         raise ValueError("Unknown evaluation split")
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     BEST_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -114,15 +154,18 @@ def log_and_save(model_name: str, model: Pipeline, metrics: dict, split: str = "
     save_confusion_matrix(metrics["confusion_matrix"], cm_path)
 
     with mlflow.start_run(run_name=f"{model_name}-{split}"):
-        mlflow.log_params({"model": model_name, "evaluation_split": split})
-        mlflow.log_metrics({k: v for k, v in metrics.items() if k != "confusion_matrix"})
+        mlflow.log_params({"model": model_name, "evaluation_split": split, "decision_threshold": metrics["decision_threshold"]})
+        mlflow.log_metrics({k: v for k, v in metrics.items() if k not in {"confusion_matrix", "decision_threshold"}})
         mlflow.log_artifact(str(metrics_path))
         mlflow.log_artifact(str(cm_path))
 
     logger.info("Saved metrics at %s", metrics_path)
 
 
-def persist_best_model(model: Pipeline) -> None:
+def persist_best_model(model: Pipeline, threshold: float = 0.5) -> None:
+    """Bundle the classifier and its validated threshold atomically."""
+    if not 0 < threshold < 1:
+        raise ValueError("Decision threshold must be strictly between 0 and 1.")
     BEST_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, BEST_MODEL_PATH)
-    logger.info("Best model saved to %s", BEST_MODEL_PATH)
+    joblib.dump({"model": model, "decision_threshold": threshold, "artifact_version": 1}, BEST_MODEL_PATH)
+    logger.info("Best model and threshold %.2f saved to %s", threshold, BEST_MODEL_PATH)
