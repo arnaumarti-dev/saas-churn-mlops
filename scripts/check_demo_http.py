@@ -71,6 +71,10 @@ def main() -> None:
     assert b"/assets/demo.js" in html and b"/assets/demo.css" in html
     assert b"/assets/dashboard-utils.js" in html
     assert b'id="batch-contract-filter"' in html
+    assert b'role="tablist"' in html
+    assert b'id="batch-cancel"' in html
+    assert b'id="batch-no-matches"' in html
+    assert b'id="batch-jump-results"' in html
     helper_status, _, helper_script = fetch(Request(BASE_URL + "/assets/dashboard-utils.js"))
     assert helper_status == 200
     assert b"csvExport" in helper_script

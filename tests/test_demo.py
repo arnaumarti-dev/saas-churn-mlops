@@ -91,3 +91,40 @@ def test_segment_analytics_filters_and_export_are_self_hosted() -> None:
     assert "script-src 'self'" in helper.headers["content-security-policy"]
     assert "unsafe-inline" not in helper.headers["content-security-policy"]
 
+
+def test_guided_dashboard_keyboard_semantics_and_responsive_feedback() -> None:
+    client = TestClient(app)
+    response = client.get("/")
+    assert response.status_code == 200
+    html = response.text
+
+    for fragment in (
+        'class="skip-link"',
+        'role="tablist"',
+        'role="tab" id="tab-single"',
+        'role="tab" id="tab-batch"',
+        'role="tabpanel" aria-labelledby="tab-single"',
+        'role="tabpanel" aria-labelledby="tab-batch"',
+        'class="workflow-steps"',
+        'id="batch-cancel"',
+        'id="batch-status" role="status"',
+        'id="batch-jump-results"',
+        'id="batch-clear-filters"',
+        'id="batch-no-matches" role="status"',
+        'id="batch-results-heading" tabindex="-1"',
+    ):
+        assert fragment in html
+
+    script = client.get("/assets/demo.js")
+    assert script.status_code == 200
+    assert "AbortController" in script.text
+    assert "fileSelectionGeneration" in script.text
+    assert "ArrowRight" in script.text
+    assert "batch-no-matches" in script.text
+
+    css = client.get("/assets/demo.css")
+    assert css.status_code == 200
+    assert "max-width:620px" in css.text
+    assert "prefers-reduced-motion:reduce" in css.text
+    assert ".cancel-analysis" in css.text
+    assert "unsafe-inline" not in css.headers["content-security-policy"]

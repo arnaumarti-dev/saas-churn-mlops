@@ -19,6 +19,7 @@ jobs:
           node --check src/churn_mlops/api/static/demo.js
           node --check src/churn_mlops/api/static/dashboard-utils.js
           node --test tests/test_dashboard_utils.cjs
+          node --test tests/test_ui_behavior.cjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
