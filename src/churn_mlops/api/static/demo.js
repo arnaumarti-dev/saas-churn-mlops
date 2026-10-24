@@ -114,6 +114,7 @@
     const batchFile = document.getElementById("batch-file");
     const batchError = document.getElementById("batch-error");
     const batchSubmit = document.getElementById("batch-submit");
+    const batchCancel = document.getElementById("batch-cancel");
     let batchCustomers = [];
     let analyzedRows = null;
     let batchGeneration = 0;
@@ -190,6 +191,7 @@
       batchSubmit.disabled = customers.length === 0;
       batchSubmit.textContent = "Analizar clientes →";
       batchSubmit.classList.remove("is-loading");
+      batchCancel.hidden = true;
       batchError.hidden = true;
       batchStatus.textContent = customers.length
         ? customers.length + " perfiles listos. Pulsa «Analizar clientes» para continuar."
@@ -416,6 +418,12 @@
       setTimeout(() => URL.revokeObjectURL(href), 1000);
     });
 
+    batchCancel.addEventListener("click", () => {
+      if (!pendingBatchRequest) return;
+      pendingBatchRequest.abort();
+      batchStatus.textContent = "Análisis cancelado. Puedes volver a intentarlo.";
+    });
+
     batchSubmit.addEventListener("click", async () => {
       if (!batchCustomers.length) return;
       const generation = batchGeneration;
@@ -425,6 +433,7 @@
       batchError.hidden = true;
       batchSubmit.disabled = true;
       batchSubmit.classList.add("is-loading");
+      batchCancel.hidden = false;
       batchSubmit.textContent = "Analizando clientes…";
       document.getElementById("batch-view").setAttribute("aria-busy", "true");
       batchStatus.textContent = "Calculando el riesgo de " + submittedCustomers.length + " perfiles…";
@@ -485,6 +494,7 @@
           document.getElementById("batch-view").setAttribute("aria-busy", "false");
           batchSubmit.disabled = batchCustomers.length === 0;
           batchSubmit.classList.remove("is-loading");
+          batchCancel.hidden = true;
           batchSubmit.textContent = "Analizar clientes →";
         }
       }
