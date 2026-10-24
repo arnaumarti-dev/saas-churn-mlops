@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from churn_mlops.api.security import SecurityMiddleware
 from churn_mlops.api.staging_login import router as staging_login_router
+from churn_mlops.api.staging_management import router as staging_management_router
 from churn_mlops.api.oidc_postgres import (
     Principal,
     get_oidc_principal,
@@ -38,6 +39,7 @@ DEMO_HTML = STATIC_DIR / "index.html"
 app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
 app.add_middleware(SecurityMiddleware)
 app.include_router(staging_login_router)
+app.include_router(staging_management_router)
 app.state.model = None
 
 

@@ -127,8 +127,11 @@ class SecurityMiddleware:
                 return
 
         is_tenant_batch = bool(TENANT_BATCH_PATH.fullmatch(scope.get("path", "")))
-        if (scope.get("path") in {"/predict", "/predict/batch"} or is_tenant_batch) and scope.get("method") == "POST":
-            body_limit = MAX_BATCH_BODY if (scope["path"] == "/predict/batch" or is_tenant_batch) else MAX_PREDICT_BODY
+        is_management = (scope.get("path", "").startswith("/saas/v3/")
+                         and scope.get("method") in {"POST", "PATCH", "DELETE"}
+                         and scope.get("path") != "/saas/v3/logout")
+        if ((scope.get("path") in {"/predict", "/predict/batch"} or is_tenant_batch) and scope.get("method") == "POST") or is_management:
+            body_limit = (4096 if is_management else MAX_BATCH_BODY if (scope["path"] == "/predict/batch" or is_tenant_batch) else MAX_PREDICT_BODY)
             ip = (scope.get("client") or ("unknown", 0))[0]
             if not self.limiter.allow(ip):
                 await reject(429, "Too many predictions; try again shortly.", {"Retry-After": "60"})
@@ -136,7 +139,7 @@ class SecurityMiddleware:
 
             headers = dict(scope.get("headers", []))
             media_type = headers.get(b"content-type", b"").split(b";", 1)[0].strip().lower()
-            if media_type != b"application/json":
+            if media_type != b"application/json" and not (is_management and scope.get("method") == "DELETE" and not media_type):
                 await reject(415, "Only application/json requests are accepted.")
                 return
 
