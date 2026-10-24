@@ -1,0 +1,17 @@
+# Optional Render Blueprint for the public educational demo.
+# Nothing is provisioned until a user explicitly deploys this Blueprint.
+services:
+  - type: web
+    name: churn-mlops-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    repo: https://github.com/arnaumarti-dev/saas-churn-mlops
+    branch: main
+    dockerfilePath: ./Dockerfile.demo
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: PORT
+        value: "10000"
