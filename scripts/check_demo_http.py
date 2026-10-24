@@ -145,6 +145,10 @@ def main() -> None:
         "/saas/v3/login",
         "/saas/v3/auth/start",
         "/saas/v3/organizations",
+        "/saas/v3/console",
+        "/saas/v3/console.js",
+        "/saas/v3/console.css",
+        "/saas/v3/organizations/list",
     ):
         try:
             fetch(Request(BASE_URL + endpoint))
