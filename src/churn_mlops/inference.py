@@ -15,11 +15,25 @@ def load_model():
     return joblib.load(BEST_MODEL_PATH)
 
 
-def predict(model, payload: dict) -> tuple[float, int]:
+def predict(artifact, payload: dict) -> tuple[float, int, float]:
+    """Predict using the threshold packaged with the trained model.
+
+    Older plain-estimator artifacts continue to work with threshold 0.50.
+    """
+    if isinstance(artifact, dict):
+        model = artifact["model"]
+        threshold = float(artifact["decision_threshold"])
+    else:
+        model = artifact
+        threshold = 0.5
+
+    if not 0 < threshold < 1:
+        raise ValueError("Invalid saved decision threshold.")
+
     data = pd.DataFrame([payload])
     data["AvgMonthlySpend"] = data["TotalCharges"] / data["tenure"].replace(0, 1)
     data["IsNewCustomer"] = (data["tenure"] <= 12).astype(int)
     probas = np.asarray(model.predict_proba(data))
     probability = float(probas[0, 1])
-    label = int(model.predict(data)[0])
-    return probability, label
+    label = int(probability >= threshold)
+    return probability, label, threshold
