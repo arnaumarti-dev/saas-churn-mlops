@@ -32,8 +32,10 @@ def predict_churn(payload: ChurnInput) -> ChurnPrediction:
     if app.state.model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    probability, label = predict(app.state.model, payload.model_dump())
-    return ChurnPrediction(churn_probability=probability, churn_prediction=label)
+    probability, label, threshold = predict(app.state.model, payload.model_dump())
+    return ChurnPrediction(
+        churn_probability=probability, churn_prediction=label, decision_threshold=threshold
+    )
 
 @app.get("/")
 def root():

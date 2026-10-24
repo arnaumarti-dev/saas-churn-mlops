@@ -41,6 +41,10 @@ def main() -> None:
         result = prediction.json()
         assert 0.0 <= result["churn_probability"] <= 1.0, result
         assert result["churn_prediction"] in {0, 1}, result
+        assert 0.0 < result["decision_threshold"] < 1.0, result
+        assert result["churn_prediction"] == int(
+            result["churn_probability"] >= result["decision_threshold"]
+        ), result
 
     print("End-to-end training/artifact/API smoke test passed.")
     print(f"Prediction: {result}")
