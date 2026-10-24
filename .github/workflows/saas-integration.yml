@@ -1,0 +1,66 @@
+name: Optional SaaS security integration
+
+on:
+  pull_request:
+    paths:
+      - "src/churn_mlops/api/oidc_postgres.py"
+      - "src/churn_mlops/api/main.py"
+      - "src/churn_mlops/api/security.py"
+      - "db/migrations/**"
+      - "tests/test_oidc_postgres.py"
+      - "requirements.saas.txt"
+      - ".github/workflows/saas-integration.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/churn_mlops/api/oidc_postgres.py"
+      - "db/migrations/**"
+      - "requirements.saas.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  security-and-rls:
+    name: Signed OIDC tokens and PostgreSQL tenant RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: churn_saas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d churn_saas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CHURN_TEST_DB_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/churn_saas_test
+      CHURN_TEST_DB_APP_URL: postgresql://churn_saas_app:demo-ci-only@localhost:5432/churn_saas_test
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install optional staging and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.serve.txt -r requirements.saas.txt pytest==9.0.3 httpx==0.27.2
+      - name: Create non-privileged application role and migrate test schema
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
+            -c "CREATE ROLE churn_saas_app LOGIN PASSWORD 'demo-ci-only' NOSUPERUSER NOBYPASSRLS;"
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
+            -f db/migrations/0001_saas_tenants_rls.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
+            -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname='churn_saas_app';"
+      - name: Verify RSA token validation and live cross-tenant RLS
+        run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py

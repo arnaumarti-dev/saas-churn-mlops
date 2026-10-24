@@ -26,3 +26,5 @@ jobs:
         run: pip-audit -r requirements.serve.txt
       - name: Audit training and development dependencies
         run: pip-audit -r requirements.txt
+      - name: Audit opt-in SaaS integration dependencies
+        run: pip-audit -r requirements.saas.txt

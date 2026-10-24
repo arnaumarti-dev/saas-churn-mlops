@@ -7,6 +7,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from churn_mlops.api.security import SecurityMiddleware
+from churn_mlops.api.oidc_postgres import (
+    Principal,
+    get_oidc_principal,
+    membership_role,
+)
 from churn_mlops.api.tenant_auth import (
     ServiceIdentity,
     check_tenant_access,
@@ -128,6 +133,32 @@ def prototype_tenant_batch(
 ) -> BatchPredictionResponse:
     """Authorize access before invoking the existing in-memory scoring core."""
     check_tenant_access(tenant_id, identity, can_predict=True)
+    return _score_batch(payload)
+
+
+@app.get("/saas/v2/tenants/{tenant_id}/me")
+def oidc_tenant_membership(
+    tenant_id: UUID,
+    principal: Principal = Depends(get_oidc_principal),
+) -> dict[str, str]:
+    """Opt-in OIDC access token + PostgreSQL role, staging ONLY."""
+    role = membership_role(tenant_id, principal)
+    return {"tenant_id": str(tenant_id), "role": role, "mode": "staging-only"}
+
+
+@app.post(
+    "/saas/v2/tenants/{tenant_id}/predict/batch",
+    response_model=BatchPredictionResponse,
+)
+def oidc_tenant_predict_batch(
+    tenant_id: UUID,
+    payload: BatchPredictionRequest,
+    principal: Principal = Depends(get_oidc_principal),
+) -> BatchPredictionResponse:
+    """Only server-authorized tenant members with scoring roles can predict."""
+    role = membership_role(tenant_id, principal)
+    if role not in {"owner", "analyst"}:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
     return _score_batch(payload)
 
 

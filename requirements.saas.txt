@@ -1,0 +1,3 @@
+# Optional private/staging SaaS dependencies. NOT installed in the public demo.
+PyJWT[crypto]==2.15.1
+psycopg[binary]==3.3.6

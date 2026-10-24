@@ -502,3 +502,25 @@ auditing and production security testing.
 
 Read the threat model, test configuration and release gates in
 [docs/saas-auth-tenant-architecture.md](docs/saas-auth-tenant-architecture.md).
+
+## Optional OIDC + PostgreSQL tenant staging (v1.6 candidate)
+
+The next security increment adds a **separate, feature-disabled** integration
+namespace at `/saas/v2/tenants/{uuid}/` with trusted OIDC access-token
+verification (pinned RS256, issuer, audience, expiry, subject, signing key)
+and authoritative PostgreSQL organization memberships. Roles are obtained
+from the database, **never** from caller-provided IDs or JWT roles.
+
+A new migration defines organizations, membership and synthetic-only
+run metadata tables with **FORCE ROW LEVEL SECURITY** and least-privileged
+role grants. The GitHub Actions integration suite validates signed/invalid
+JWTs and cross-tenant isolation against ephemeral real PostgreSQL.
+
+There is **no hosted identity provider, database service, registration UI
+or company data** in the public app. Optional dependencies are isolated in
+`requirements.saas.txt`, **not** installed in `Dockerfile.demo`; the
+staging feature is off unless explicitly configured.
+
+See [docs/oidc-postgres-staging.md](docs/oidc-postgres-staging.md).
+Never enable it on public Render or submit real customer records before
+a full security, privacy and operations review.
