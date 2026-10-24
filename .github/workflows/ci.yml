@@ -15,7 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate dashboard JavaScript syntax
-        run: node --check src/churn_mlops/api/static/demo.js
+        run: |
+          node --check src/churn_mlops/api/static/demo.js
+          node --check src/churn_mlops/api/static/dashboard-utils.js
+          node --test tests/test_dashboard_utils.cjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
