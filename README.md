@@ -424,3 +424,29 @@ The application does not include accounts, per-tenant isolation, storage,
 retention policies or an independently validated business risk model.
 Charts represent predictions and classifications, **not measured customer
 outcomes**.
+
+## Segmented portfolio analytics (experimental)
+
+The optional batch dashboard now includes **client-side** analysis of model
+results: contract cohorts (monthly / one-year / two-year), counts above the
+validation threshold, filtering by classification and contract, sorting by
+probability, and exporting the **currently filtered** result rows as CSV.
+
+- Aggregate headline metrics still refer to the **entire analyzed batch**.
+  Filters only affect the row table and the downloaded CSV.
+- Contract cohorts display **counts and proportions**, not causal effects.
+  The model has not been validated for actual retention interventions.
+- The downloaded results file contains only the **source CSV row number**,
+  a restricted contract category, prediction probability, and classification.
+  It never includes customer IDs, names, email addresses, or other original
+  fields. Contract category labels are normalized to an allowlist so malicious
+  spreadsheet formulas from arbitrary imported data cannot be included.
+- Original profiles and predictions exist only in the browser session's memory
+  and are cleared when another dataset is selected; no new backend storage,
+  cookies, accounts or third-party analytics are introduced.
+- Data still travels to the API for model scoring. **Use synthetic profiles
+  only** until the service has real authentication, tenant isolation,
+  compliance review, access logging policy and appropriate retention controls.
+
+Unit tests for these analytical helpers use the built-in Node test runner;
+there are no new runtime or browser dependencies.
