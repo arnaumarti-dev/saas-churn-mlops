@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Churn Lab · Administración privada de pruebas</title>
+  <link rel="stylesheet" href="/saas/v3/console.css">
+  <script defer src="/saas/v3/console.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Saltar al contenido</a>
+  <header class="top">
+    <div class="brand"><span class="brand-icon" aria-hidden="true">↗</span> Churn Lab <span class="badge">Staging privado</span></div>
+    <div class="top-links">
+      <a href="/saas/v3/organizations">Mis empresas</a>
+      <form method="post" action="/saas/v3/logout"><button class="link-button" type="submit">Cerrar sesión</button></form>
+    </div>
+  </header>
+
+  <main id="main" class="shell">
+    <div class="intro">
+      <p class="eyebrow">CHURN LAB · V1.9</p>
+      <h1>Gestiona tus empresas de pruebas.</h1>
+      <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
+    </div>
+    <p id="feedback" class="feedback" role="status" aria-live="polite">Cargando empresas…</p>
+    <div class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Mis empresas</h2>
+          <label for="org-picker">Selecciona una empresa</label>
+          <select id="org-picker" disabled><option value="">Cargando…</option></select>
+          <p id="org-role" class="muted small"></p>
+          <button id="refresh" class="secondary" type="button">Actualizar lista</button>
+        </section>
+        <section class="panel">
+          <h2>Crear empresa</h2>
+          <form id="create-org">
+            <label for="org-name">Nombre ficticio de la empresa</label>
+            <input id="org-name" maxlength="120" minlength="1" placeholder="Ej. Acme Demo" required autocomplete="off">
+            <button type="submit">Crear empresa</button>
+          </form>
+        </section>
+        <section class="panel">
+          <h2>Unirme con invitación</h2>
+          <form id="redeem-invite">
+            <label for="invite-input">Código privado de 43 caracteres</label>
+            <input id="invite-input" minlength="43" maxlength="43" pattern="[A-Za-z0-9_-]{43}" required autocomplete="off" spellcheck="false" aria-describedby="invite-hint">
+            <p id="invite-hint" class="muted small">Válido una vez durante 24 horas. No es un enlace público.</p>
+            <button type="submit">Aceptar invitación</button>
+          </form>
+        </section>
+      </aside>
+      <div class="content">
+        <section id="details" class="panel">
+          <h2>Equipo</h2>
+          <p id="selected-hint" class="muted">Selecciona una empresa para consultar tu acceso.</p>
+          <div id="owner-tools" hidden>
+            <div class="section-title"><h3>Miembros de la organización</h3><button class="secondary" id="refresh-members" type="button">Actualizar miembros</button></div>
+            <p class="muted small">Solo los propietarios pueden cambiar permisos. Siempre debe quedar al menos uno.</p>
+            <div id="member-list" class="members" aria-live="polite"></div>
+          </div>
+        </section>
+        <section id="invite-tools" class="panel" hidden>
+          <h2>Invitar a una persona</h2>
+          <p class="muted small">El código lo podrá canjear cualquier cuenta de pruebas del mismo proveedor OIDC que lo reciba. No se envían correos.</p>
+          <form id="issue-invite">
+            <label for="invite-role">Permisos de la persona invitada</label>
+            <select id="invite-role">
+              <option value="viewer">Lector · solo consulta</option>
+              <option value="analyst">Analista · puede hacer predicciones</option>
+            </select>
+            <button type="submit">Generar código de invitación</button>
+          </form>
+          <div id="one-time-code" class="secret" hidden>
+            <p><strong>Código de un solo uso — caduca en 24 horas</strong></p>
+            <code id="issued-code"></code>
+            <p class="muted small">Cópialo ahora y entrégalo únicamente por un canal seguro a la persona autorizada. No se volverá a mostrar.</p>
+            <button id="hide-code" type="button" class="secondary">Ocultar código</button>
+          </div>
+        </section>
+      </div>
+    </div>
+    <footer>Prueba técnica · sin facturación, sin correos automáticos y sin datos de clientes.</footer>
+  </main>
+</body>
+</html>
