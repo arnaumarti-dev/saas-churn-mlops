@@ -22,7 +22,6 @@ PRIVATE_ASSETS = Path(__file__).resolve().parent / "private_assets"
 def console(_: Principal = Depends(_v18_principal)):
     return FileResponse(
         PRIVATE_ASSETS / "console.html", media_type="text/html",
-        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -30,7 +29,6 @@ def console(_: Principal = Depends(_v18_principal)):
 def console_script(_: Principal = Depends(_v18_principal)):
     return FileResponse(
         PRIVATE_ASSETS / "console.js", media_type="application/javascript",
-        headers={"Cache-Control": "no-store"},
     )
 
 
@@ -38,7 +36,6 @@ def console_script(_: Principal = Depends(_v18_principal)):
 def console_styles(_: Principal = Depends(_v18_principal)):
     return FileResponse(
         PRIVATE_ASSETS / "console.css", media_type="text/css",
-        headers={"Cache-Control": "no-store"},
     )
 
 
