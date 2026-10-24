@@ -153,6 +153,27 @@ def main() -> None:
             assert error.code == 404, (endpoint, error.code)
             assert error.headers.get("cache-control") == "no-store"
 
+    # v1.8 tenant management must be inaccessible in public portfolio Docker.
+    import uuid
+    tenant = str(uuid.uuid4())
+    for method, path, payload in (
+        ("POST", "/saas/v3/organizations", {"name": "test"}),
+        ("POST", "/saas/v3/invitations/accept", {"code": "A" * 43}),
+        ("POST", f"/saas/v3/organizations/{tenant}/invitations", {"role": "viewer"}),
+    ):
+        request = Request(
+            BASE_URL + path,
+            data=json.dumps(payload).encode("utf-8"),
+            method=method,
+            headers={"Content-Type": "application/json", "Origin": BASE_URL},
+        )
+        try:
+            fetch(request)
+            raise AssertionError(f"Disabled staging management exposed: {path}")
+        except HTTPError as error:
+            assert error.code == 404, (path, error.code)
+            assert error.headers.get("cache-control") == "no-store"
+
     print(f"Self-contained demo is operational: {prediction}")
 
 
