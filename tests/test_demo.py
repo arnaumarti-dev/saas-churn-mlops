@@ -20,7 +20,8 @@ def test_root_serves_interactive_spanish_demo() -> None:
 
 
 def test_demo_includes_all_required_churn_features() -> None:
-    html = TestClient(app).get("/").text
+    client = TestClient(app)
+    html = client.get("/").text + "\n" + client.get("/assets/demo.js").text
     fields = [
         "gender", "SeniorCitizen", "Partner", "Dependents", "tenure",
         "PhoneService", "MultipleLines", "InternetService", "OnlineSecurity",
