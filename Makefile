@@ -24,7 +24,7 @@ smoke-test:
 	$(PYTHON) scripts/smoke_test.py
 
 mlflow-ui:
-	mlflow ui --backend-store-uri mlruns --host 0.0.0.0 --port 5000
+	mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5000
 
 docker-build:
 	docker build -t saas-churn-mlops:latest .

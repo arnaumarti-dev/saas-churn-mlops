@@ -41,7 +41,7 @@ src/churn_mlops/api/main.py (FastAPI)
 
 Key production choices:
 - Uses `Pipeline` + `ColumnTransformer` to prevent leakage (fit transformations on train only).
-- Tracks every run in MLflow (`mlruns/`).
+- Tracks every run in MLflow (`mlflow.db`, a local SQLite database).
 - Saves confusion matrix and metrics artifacts.
 - Exposes prediction API with strict Pydantic request schema.
 - Central logging configuration.
@@ -56,7 +56,7 @@ Key production choices:
 ├── artifacts/                    # metrics JSON + confusion matrix plots
 ├── data/
 │   └── telco_churn.csv          # downloaded raw data
-├── mlruns/                      # MLflow tracking backend (local file store)
+├── mlflow.db                    # MLflow experiment tracking (SQLite database)
 ├── models/
 │   └── best_model.joblib        # persisted best model
 ├── scripts/
@@ -344,3 +344,33 @@ This application has no accounts, authentication or request throttling and
 should be used only with fictional/demonstration profiles. Never enter real
 customer records or other sensitive information. Public hosting has not been
 performed by this repository change.
+
+
+## Security controls (portfolio demo)
+
+- **Input protection:** `POST /predict` accepts JSON only; request bodies are
+  capped at 16 KiB even for streamed/chunked bodies. Numeric inputs reject
+  NaN/infinity, unexpected fields, and extremely large values.
+- **Abuse controls:** up to 30 predictions per 60 seconds, per apparent client
+  IP, are accepted, with HTTP 429 + Retry-After after the limit. This is
+  **in-process best-effort limiting**, not distributed edge protection:
+  counters reset on restarts and Render proxies may aggregate client IPs.
+- **Browser headers:** CSP disallows inline JS/CSS on the demo and serves both
+  resources locally under `/assets`. HSTS, no-sniff, deny-framing, no-referrer
+  and permissions policy are added. Built-in Swagger (`/docs`, `/redoc`)
+  uses a **narrow exception** for its third-party CDN and inline initializer.
+- **Dependencies:** FastAPI/Pydantic/Uvicorn and MLflow have been updated for
+  security maintenance; CI verifies compatibility, including training in Docker.
+  Automated `pip-audit` and Dependabot checks detect vulnerable Python
+  packages and propose updates. Treat audit failures as blockers.
+- **Supply chain:** the runtime uses a non-root user and loads only the
+  model artifact produced by our own trusted Docker training stage. Loading
+  an attacker-controlled pickle/joblib file can execute Python code.
+- **Deployment:** changing GitHub does not update the existing Render service
+  because automatic deploys were disabled. Review and test before each
+  explicit redeploy. No API keys or customer data are necessary to use
+  this educational demo.
+
+This does not establish that the service is free of CVEs, denial-of-service
+vectors, or new supply-chain vulnerabilities. For serious external traffic,
+add provider-side/WAF rate limiting, request monitoring and operational alerts.
