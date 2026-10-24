@@ -42,3 +42,16 @@ def test_predict_endpoint() -> None:
     body = response.json()
     assert body["churn_prediction"] == 1
     assert 0 <= body["churn_probability"] <= 1
+    assert body["decision_threshold"] == 0.5  # Backward-compatible old model artifact
+
+    # An updated artifact must use its saved threshold, not model.predict().
+    app.state.model = {"model": DummyModel(), "decision_threshold": 0.9}
+    response = client.post("/predict", json=payload)
+    assert response.status_code == 200
+    assert response.json()["churn_probability"] == 0.8
+    assert response.json()["churn_prediction"] == 0
+    assert response.json()["decision_threshold"] == 0.9
+
+    app.state.model = {"model": DummyModel(), "decision_threshold": 0.7}
+    response = client.post("/predict", json=payload)
+    assert response.json()["churn_prediction"] == 1
