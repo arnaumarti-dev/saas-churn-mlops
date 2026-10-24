@@ -105,9 +105,14 @@ def test_console_requires_login_and_is_strictly_private(config):
 
 def test_invalid_session_cannot_load_assets(config):
     with browser("tamper-" + str(uuid4())) as client:
-        client.cookies.set(login.SESSION_COOKIE, "corrupted", path="/")
         for path in STAGING_PAGES[:3]:
-            assert client.get(BASE + path).status_code == 401
+            # Override the existing host cookie rather than add another
+            # cookie with potentially different test-client domain scoping.
+            response = client.get(
+                BASE + path,
+                headers={"Cookie": login.SESSION_COOKIE + "=corrupted"},
+            )
+            assert response.status_code == 401
 
 
 @pytest.mark.skipif(not os.getenv("CHURN_TEST_DB_ADMIN_URL"), reason="CI ephemeral PostgreSQL required")
