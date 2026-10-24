@@ -119,9 +119,39 @@
           </div>
         </aside>
       </div>
+      <section class="panel batch-segments-panel" id="batch-segments-panel" hidden aria-labelledby="batch-segments-title">
+        <h2 id="batch-segments-title">Riesgo por tipo de contrato</h2>
+        <p class="sub">Comparación descriptiva de las clasificaciones del lote. No demuestra causalidad ni mide bajas reales.</p>
+        <div id="contract-segments" class="contract-segments" aria-live="polite"></div>
+      </section>
       <section class="panel batch-results" id="batch-results" hidden aria-label="Predicciones por fila">
         <h2>Detalle de predicciones</h2>
         <p class="sub">Filas identificadas por su número en el archivo. La API no devuelve los datos originales de los clientes.</p>
+        <div class="dashboard-toolbar" role="group" aria-label="Filtrar predicciones">
+          <label><span>Clasificación</span>
+            <select id="batch-risk-filter">
+              <option value="all">Todas</option><option value="high">Por encima del umbral</option><option value="low">Por debajo del umbral</option>
+            </select>
+          </label>
+          <label><span>Contrato</span>
+            <select id="batch-contract-filter">
+              <option value="all">Todos los contratos</option>
+              <option value="Month-to-month">Mensual</option><option value="One year">Anual</option>
+              <option value="Two year">Dos años</option><option value="Otros">Otros</option>
+            </select>
+          </label>
+          <label><span>Orden</span>
+            <select id="batch-sort">
+              <option value="file">Orden del CSV</option>
+              <option value="highest">Mayor riesgo primero</option><option value="lowest">Menor riesgo primero</option>
+            </select>
+          </label>
+        </div>
+        <div class="dashboard-results-actions">
+          <p class="sub" id="batch-match-count" aria-live="polite">Sin predicciones filtradas.</p>
+          <button type="button" class="preset" id="batch-export" disabled>↓ Descargar resultados filtrados</button>
+        </div>
+        <p class="note export-note">La descarga incluye solo número de fila, tipo de contrato, probabilidad y clasificación. No incluye identificadores ni los campos originales.</p>
         <div class="table-scroll">
           <table><thead><tr><th scope="col">Fila CSV</th><th scope="col">Probabilidad</th><th scope="col">Clasificación</th></tr></thead>
           <tbody id="batch-table"></tbody></table>
@@ -130,6 +160,7 @@
     </section>
     <footer>Construido con FastAPI, scikit-learn, MLflow y Docker · <a href="/docs">API interactiva</a></footer>
   </div>
+  <script src="/assets/dashboard-utils.js" defer></script>
   <script src="/assets/demo.js" defer></script>
 </body>
 </html>
