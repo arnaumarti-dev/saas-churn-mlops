@@ -26,3 +26,4 @@ class ChurnInput(BaseModel):
 class ChurnPrediction(BaseModel):
     churn_probability: float
     churn_prediction: int
+    decision_threshold: float = Field(..., gt=0, lt=1)
