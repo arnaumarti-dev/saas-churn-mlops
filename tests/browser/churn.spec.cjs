@@ -37,7 +37,7 @@ test.describe("Responsive real-browser visual and workflow QA", () => {
 
       await page.locator("#batch-risk-filter").selectOption("high");
       await expect(page.locator("#batch-match-count")).toContainText("de 12 predicciones");
-      await page.locator("#batch-contract-filter").selectOption("Two year");
+      await page.locator("#batch-contract-filter").selectOption("Otros");
       await expect(page.locator("#batch-no-matches")).toBeVisible();
       await expect(page.locator("#batch-export")).toBeDisabled();
       await page.locator("#batch-clear-filters").click();
