@@ -128,6 +128,17 @@ def main() -> None:
         assert error.code == 404, f"Unexpected prototype route status: {error.code}"
         assert error.headers.get("cache-control") == "no-store"
 
+    # The newer OIDC/Postgres staging paths are also disabled on public demo.
+    oidc_off = Request(
+        BASE_URL + "/saas/v2/tenants/aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa/me"
+    )
+    try:
+        fetch(oidc_off)
+        raise AssertionError("The OIDC staging integration unexpectedly responded 200")
+    except HTTPError as error:
+        assert error.code == 404, f"Unexpected OIDC staging status: {error.code}"
+        assert error.headers.get("cache-control") == "no-store"
+
     print(f"Self-contained demo is operational: {prediction}")
 
 
