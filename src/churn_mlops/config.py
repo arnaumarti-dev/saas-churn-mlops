@@ -6,7 +6,9 @@ RAW_DATA_PATH = DATA_DIR / "telco_churn.csv"
 MODELS_DIR = ROOT_DIR / "models"
 ARTIFACTS_DIR = ROOT_DIR / "artifacts"
 BEST_MODEL_PATH = MODELS_DIR / "best_model.joblib"
-MLFLOW_TRACKING_URI = (ROOT_DIR / "mlruns").resolve().as_uri()
+# MLflow 3 uses a database tracking backend; the legacy FileStore is deprecated.
+MLFLOW_DB_PATH = (ROOT_DIR / "mlflow.db").resolve()
+MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH.as_posix()}"
 EXPERIMENT_NAME = "saas-churn-prediction"
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
