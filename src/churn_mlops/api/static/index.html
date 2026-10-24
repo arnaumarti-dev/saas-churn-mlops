@@ -8,21 +8,22 @@
   <link rel="stylesheet" href="/assets/demo.css">
 </head>
 <body>
+  <a class="skip-link" href="#workspace">Saltar al contenido</a>
   <div class="shell">
     <header>
       <div class="brand"><div class="brand-mark" aria-hidden="true">↗</div> Churn Lab</div>
-      <a class="header-link" href="/docs">Documentación API ↗</a>
+      <div class="header-meta"><span class="demo-indicator">● Demo educativa</span><a class="header-link" href="/docs">Documentación API ↗</a></div>
     </header>
     <section class="hero">
       <div class="eyebrow">Portfolio · Machine Learning / MLOps</div>
       <h1>Anticipa el <em>abandono</em> de clientes.</h1>
       <p>Explora cómo un modelo de Machine Learning estima el riesgo de baja de un cliente a partir de sus datos contractuales y de servicio.</p>
     </section>
-    <nav class="view-nav" aria-label="Modo de análisis">
-      <button class="view-tab active" type="button" id="tab-single" aria-controls="single-view" aria-selected="true">◈ Predicción individual</button>
-      <button class="view-tab" type="button" id="tab-batch" aria-controls="batch-view" aria-selected="false">▥ Analizar CSV y dashboard</button>
+    <nav class="view-nav" id="workspace" role="tablist" aria-label="Modo de análisis" tabindex="-1">
+      <button class="view-tab active" type="button" role="tab" id="tab-single" aria-controls="single-view" aria-selected="true" tabindex="0">◈ Predicción individual</button>
+      <button class="view-tab" type="button" role="tab" id="tab-batch" aria-controls="batch-view" aria-selected="false" tabindex="-1">▥ Analizar CSV y dashboard</button>
     </nav>
-    <main class="layout" id="single-view">
+    <main class="layout" id="single-view" role="tabpanel" aria-labelledby="tab-single" tabindex="0">
       <section class="panel" aria-labelledby="form-title">
         <h2 id="form-title">Configura un perfil</h2>
         <p class="sub">Puedes probar los ejemplos o editar los valores. No se guardan los datos introducidos en esta página.</p>
@@ -81,12 +82,17 @@
         <p class="note">Proyecto educativo con datos IBM Telco Customer Churn. Este prototipo no es una herramienta comercial validada y no ofrece recomendaciones individualizadas.</p>
       </aside>
     </main>
-    <section id="batch-view" hidden aria-labelledby="batch-title">
+    <section id="batch-view" hidden role="tabpanel" aria-labelledby="tab-batch" tabindex="0">
       <div class="layout batch-layout">
         <section class="panel">
           <div class="eyebrow">Análisis de cohortes · Versión demostrativa</div>
           <h2 id="batch-title">Analiza varios clientes a la vez</h2>
           <p class="sub">Importa un CSV con las 19 columnas del modelo, o prueba los datos completamente ficticios. Hasta 200 filas por análisis.</p>
+          <ol class="workflow-steps" aria-label="Cómo usar el análisis masivo">
+            <li><span class="step-number" aria-hidden="true">1</span><span><strong>Prepara datos</strong><small>Utiliza los ejemplos o carga un CSV.</small></span></li>
+            <li><span class="step-number" aria-hidden="true">2</span><span><strong>Analiza</strong><small>Calcula las probabilidades del lote.</small></span></li>
+            <li><span class="step-number" aria-hidden="true">3</span><span><strong>Explora</strong><small>Filtra y descarga los resultados.</small></span></li>
+          </ol>
           <div class="batch-actions">
             <button type="button" class="preset" id="batch-example">↗ Usar 12 clientes ficticios</button>
             <button type="button" class="preset" id="batch-download">↓ Descargar CSV de ejemplo</button>
@@ -96,6 +102,8 @@
           </label>
           <div class="batch-preview" id="batch-preview" aria-live="polite">Sin datos cargados. Utiliza los ejemplos o selecciona un CSV.</div>
           <button class="submit" type="button" id="batch-submit" disabled>Analizar clientes →</button>
+          <p class="batch-status" id="batch-status" role="status" aria-live="polite" aria-atomic="true">Selecciona datos ficticios para comenzar.</p>
+          <button class="jump-results" type="button" id="batch-jump-results" hidden>Ver resultados detallados ↓</button>
           <div class="notice" id="batch-error" role="alert" hidden></div>
           <p class="note" id="batch-privacy">Privacidad: esta demo no guarda los perfiles en una base de datos, pero se envían temporalmente al servidor para calcular la predicción. <strong>No utilices datos personales ni información comercial real.</strong> No incluye cuentas ni permisos de empresa.</p>
         </section>
@@ -125,7 +133,7 @@
         <div id="contract-segments" class="contract-segments" aria-live="polite"></div>
       </section>
       <section class="panel batch-results" id="batch-results" hidden aria-label="Predicciones por fila">
-        <h2>Detalle de predicciones</h2>
+        <h2 id="batch-results-heading" tabindex="-1">Detalle de predicciones</h2>
         <p class="sub">Filas identificadas por su número en el archivo. La API no devuelve los datos originales de los clientes.</p>
         <div class="dashboard-toolbar" role="group" aria-label="Filtrar predicciones">
           <label><span>Clasificación</span>
@@ -149,10 +157,14 @@
         </div>
         <div class="dashboard-results-actions">
           <p class="sub" id="batch-match-count" aria-live="polite">Sin predicciones filtradas.</p>
-          <button type="button" class="preset" id="batch-export" disabled>↓ Descargar resultados filtrados</button>
+          <div class="results-buttons">
+            <button type="button" class="preset" id="batch-clear-filters" disabled>Limpiar filtros</button>
+            <button type="button" class="preset" id="batch-export" disabled>↓ Descargar resultados filtrados</button>
+          </div>
         </div>
         <p class="note export-note">La descarga incluye solo número de fila, tipo de contrato, probabilidad y clasificación. No incluye identificadores ni los campos originales.</p>
-        <div class="table-scroll">
+        <p class="empty-results" id="batch-no-matches" role="status" hidden>No hay resultados con estos filtros. Prueba con otra combinación o limpia los filtros.</p>
+        <div class="table-scroll" id="batch-table-scroll">
           <table><thead><tr><th scope="col">Fila CSV</th><th scope="col">Probabilidad</th><th scope="col">Clasificación</th></tr></thead>
           <tbody id="batch-table"></tbody></table>
         </div>
