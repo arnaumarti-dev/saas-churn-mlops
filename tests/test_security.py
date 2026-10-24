@@ -8,7 +8,7 @@ from churn_mlops.api.security import MAX_PREDICT_BODY, SecurityMiddleware
 
 def test_security_headers_cover_dashboard_and_api() -> None:
     client = TestClient(app)
-    for path in ("/", "/health", "/docs", "/assets/demo.js"):
+    for path in ("/", "/health", "/assets/demo.js"):
         response = client.get(path)
         assert response.status_code == 200
         assert "script-src 'self'" in response.headers["content-security-policy"]
@@ -16,6 +16,23 @@ def test_security_headers_cover_dashboard_and_api() -> None:
         assert response.headers["x-content-type-options"] == "nosniff"
         assert response.headers["x-frame-options"] == "DENY"
         assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_swagger_docs_has_scoped_cdn_policy() -> None:
+    docs = TestClient(app).get("/docs")
+    assert docs.status_code == 200
+    assert "https://cdn.jsdelivr.net" in docs.headers["content-security-policy"]
+    assert "unsafe-inline" in docs.headers["content-security-policy"]
+
+
+def test_schema_rejects_unexpected_fields() -> None:
+    from churn_mlops.schemas import ChurnInput
+    from pydantic import ValidationError
+
+    with __import__("pytest").raises(ValidationError):
+        ChurnInput.model_validate({"unexpected": "very-large"})
+
+
 
 
 def isolated_app() -> FastAPI:
