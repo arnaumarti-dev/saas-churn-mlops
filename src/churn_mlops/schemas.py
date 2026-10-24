@@ -1,12 +1,13 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat
 
 
 class ChurnInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     gender: str = Field(..., examples=["Female"])
     SeniorCitizen: int = Field(..., ge=0, le=1)
     Partner: str
     Dependents: str
-    tenure: int = Field(..., ge=0)
+    tenure: int = Field(..., ge=0, le=1200)
     PhoneService: str
     MultipleLines: str
     InternetService: str
@@ -19,8 +20,8 @@ class ChurnInput(BaseModel):
     Contract: str
     PaperlessBilling: str
     PaymentMethod: str
-    MonthlyCharges: float = Field(..., ge=0)
-    TotalCharges: float = Field(..., ge=0)
+    MonthlyCharges: FiniteFloat = Field(..., ge=0, le=1_000_000)
+    TotalCharges: FiniteFloat = Field(..., ge=0, le=1_000_000_000)
 
 
 class ChurnPrediction(BaseModel):
