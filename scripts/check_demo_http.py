@@ -67,7 +67,11 @@ def main() -> None:
     status, content_type, html = fetch(Request(BASE_URL + "/"))
     assert status == 200
     assert "text/html" in content_type, content_type
-    assert b"Churn Lab" in html and b'fetch("/predict"' in html
+    assert b"Churn Lab" in html
+    assert b"/assets/demo.js" in html and b"/assets/demo.css" in html
+    js_status, _, script = fetch(Request(BASE_URL + "/assets/demo.js"))
+    assert js_status == 200
+    assert b'fetch("/predict"' in script
 
     request = Request(
         BASE_URL + "/predict",
