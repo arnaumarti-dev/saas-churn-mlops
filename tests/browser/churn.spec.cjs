@@ -18,6 +18,14 @@ test.describe("Responsive real-browser visual and workflow QA", () => {
       await page.goto("/", { waitUntil: "networkidle" });
       await expect(page.getByRole("heading", { name: /Anticipa el abandono/ })).toBeVisible();
       await expect(page.locator("#tab-single")).toHaveAttribute("aria-selected", "true");
+      if (viewport.width <= 375) {
+        const actionSize = await page.locator("#submit-button").evaluate(element => ({
+          height: element.getBoundingClientRect().height,
+          overflow: element.scrollWidth - element.clientWidth
+        }));
+        expect(actionSize.height, "Individual prediction CTA should fit on one line").toBeLessThan(65);
+        expect(actionSize.overflow, "Individual prediction CTA text should not be clipped").toBeLessThanOrEqual(1);
+      }
       await page.screenshot({ path: path.join("test-results", "visual-qa", viewport.name + "-initial.png"), fullPage: true });
 
       const overflowBefore = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -33,6 +41,10 @@ test.describe("Responsive real-browser visual and workflow QA", () => {
       await expect(page.locator("#batch-table tr")).toHaveCount(12);
       await expect(page.locator("#batch-jump-results")).toBeVisible();
 
+      if (viewport.width <= 375) {
+        await expect(page.locator(".mobile-table-hint")).toBeVisible();
+        await expect(page.locator(".mobile-table-hint")).toContainText("Desliza");
+      }
       await page.screenshot({ path: path.join("test-results", "visual-qa", viewport.name + "-dashboard.png"), fullPage: true });
 
       await page.locator("#batch-risk-filter").selectOption("high");
