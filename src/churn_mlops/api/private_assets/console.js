@@ -90,6 +90,14 @@
     $("owner-tools").hidden = !owner;
     $("invite-tools").hidden = !owner;
     $("member-list").replaceChildren();
+    $("analysis-tools").hidden = !org;
+    $("run-list").replaceChildren();
+    $("analysis-result").replaceChildren();
+    $("analysis-result").hidden = true;
+    $("run-sample").disabled = !org || !["owner", "analyst"].includes(org.role);
+    $("run-permission-hint").textContent = !org ? "" : org.role === "viewer"
+      ? "Tu rol de lector permite consultar el historial, pero no ejecutar análisis."
+      : "Los análisis usan el modelo de IA y tres perfiles ficticios preparados.";
     $("org-role").textContent = org ? "Tu rol: " + roleLabel(org.role) : "";
     $("selected-hint").textContent = !org
       ? "Todavía no tienes empresas. Crea una ficticia o acepta una invitación."
@@ -97,6 +105,7 @@
         : "Tu acceso es de " + roleLabel(org.role).toLowerCase()
           + ". Solo un propietario puede administrar miembros e invitaciones.";
     if (owner) await loadMembers();
+    if (org) await loadRuns();
   }
 
   function memberRow(member) {
@@ -171,6 +180,68 @@
     }
     for (const member of data.members) members.append(memberRow(member));
   }
+
+  async function loadRuns() {
+    const org = currentOrg();
+    if (!org) return;
+    const tenantId = org.tenant_id;
+    const result = await api(
+      "GET", "/saas/v3/organizations/" + encodeURIComponent(tenantId) + "/runs"
+    );
+    if (currentId !== tenantId) return;
+    const list = $("run-list");
+    list.replaceChildren();
+    if (!Array.isArray(result.runs) || result.runs.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Todavía no hay análisis guardados para esta empresa.";
+      list.append(empty);
+      return;
+    }
+    for (const run of result.runs) {
+      const row = document.createElement("div");
+      row.className = "member";
+      const timestamp = new Date(run.created_at);
+      const when = Number.isNaN(timestamp.getTime())
+        ? "Fecha no disponible" : timestamp.toLocaleString("es-ES");
+      row.textContent = when + " · " + run.total_profiles +
+        " perfiles ficticios · " + run.high_risk_customers + " riesgo alto";
+      list.append(row);
+    }
+  }
+
+  $("refresh-runs").addEventListener("click", () => loadRuns().then(
+    () => message("Historial actualizado."),
+    (e) => message(e.message, true)
+  ));
+
+  $("run-sample").addEventListener("click", async () => {
+    const org = currentOrg();
+    if (!org || !["owner", "analyst"].includes(org.role)) return;
+    const tenantId = org.tenant_id;
+    $("run-sample").disabled = true;
+    try {
+      const result = await api(
+        "POST", "/saas/v3/organizations/" + encodeURIComponent(tenantId) +
+        "/runs/sample", {}
+      );
+      if (currentId !== tenantId) return;
+      const summary = result.summary;
+      const output = $("analysis-result");
+      output.textContent = summary.total_customers + " perfiles analizados · " +
+        summary.high_risk_customers + " riesgo alto · " +
+        summary.low_risk_customers + " riesgo bajo · Probabilidad media: " +
+        (summary.average_churn_probability * 100).toFixed(1) + "%";
+      output.hidden = false;
+      await loadRuns();
+      message("Análisis sintético guardado en el historial.");
+    } catch (error) {
+      message(error.message, true);
+    } finally {
+      $("run-sample").disabled = !currentOrg() ||
+        !["owner", "analyst"].includes(currentOrg().role);
+    }
+  });
 
   async function submit(form, fn) {
     const button = form.querySelector('button[type="submit"]');
