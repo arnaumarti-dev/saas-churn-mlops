@@ -14,6 +14,7 @@ on:
       - "src/churn_mlops/api/staging_console.py"
       - "src/churn_mlops/api/private_assets/**"
       - "tests/test_staging_console.py"
+      - "tests/test_staging_browser_e2e.py"
       - "tests/test_staging_management.py"
       - "requirements.saas.txt"
       - ".github/workflows/saas-integration.yml"
@@ -75,3 +76,19 @@ jobs:
             -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname='churn_saas_app';"
       - name: Verify RSA token validation and live cross-tenant RLS
         run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py tests/test_staging_login.py tests/test_staging_management.py tests/test_staging_console.py
+      - name: Install Chromium browser test dependency
+        run: |
+          pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Enable local HTTPS test server without root permissions
+        run: sudo sysctl -w net.ipv4.ip_unprivileged_port_start=0
+      - name: Exercise real browser company invite and role lifecycle
+        run: PYTHONPATH=src pytest -q tests/test_staging_browser_e2e.py
+      - name: Upload synthetic private staging screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: churn-private-console-qa
+          path: test-results/private-staging-qa/
+          if-no-files-found: ignore
+          retention-days: 7
