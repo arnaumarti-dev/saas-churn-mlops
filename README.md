@@ -575,3 +575,19 @@ changing roles, revoking access and preserving the final owner. A hosted
 OIDC provider is still **not connected or tested**, and the public Render
 demo remains unchanged. See
 [docs/private-browser-e2e.md](docs/private-browser-e2e.md).
+
+## v2.1 candidate — Local-only real Keycloak OIDC staging
+
+An **optional, disposable** `compose.private-staging.yml` stack can run
+Keycloak, two local PostgreSQL databases, Churn Lab's staging API and
+Caddy's local HTTPS proxy **only on 127.0.0.1:443**. The Keycloak realm
+uses public-client Authorization Code + mandatory PKCE S256 with no
+pre-provisioned users. A new pinned JWKS check accepts the exact
+Keycloak realm certificate path; the original .well-known JWKS support
+and issuer/signature restrictions stay intact.
+
+This is **not deployed, not yet browser-verified with a live provider, and
+not suitable for real user data**. Read
+[docs/local-keycloak-staging.md](docs/local-keycloak-staging.md)
+before generating local secrets or deciding to trust the local CA.
+Render public demo remains unchanged and SaaS routes remain disabled there.
