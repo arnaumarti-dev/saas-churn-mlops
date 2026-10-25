@@ -149,6 +149,7 @@ def main() -> None:
         "/saas/v3/console.js",
         "/saas/v3/console.css",
         "/saas/v3/organizations/list",
+        "/saas/v3/organizations/aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa/runs",
     ):
         try:
             fetch(Request(BASE_URL + endpoint))
@@ -163,6 +164,7 @@ def main() -> None:
     for method, path, payload in (
         ("POST", "/saas/v3/organizations", {"name": "test"}),
         ("POST", "/saas/v3/invitations/accept", {"code": "A" * 43}),
+        ("POST", f"/saas/v3/organizations/{tenant}/runs/sample", {}),
         ("POST", f"/saas/v3/organizations/{tenant}/invitations", {"role": "viewer"}),
     ):
         request = Request(
