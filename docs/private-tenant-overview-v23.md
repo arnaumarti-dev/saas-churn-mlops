@@ -12,7 +12,9 @@
 
 ## Garantías y límites
 
-- **Sin nuevos endpoints, migraciones o privilegios**: reutiliza los controles OIDC, la pertenencia verificada, RLS y el API de historial de v2.2.
+- Las métricas reutilizan las rutas de historial de v2.2, sin nuevos privilegios de tabla. Los alias ficticios sí requieren una **migración nueva 0004**, un endpoint de edición propia y una función SQL autorizada únicamente para la identidad activa.
+- Cada miembro puede asignarse un alias distinto de 2 a 40 caracteres **para cada empresa**. Los propietarios ven alias en el equipo en lugar del UUID completo; quien no haya elegido uno aparece como «Miembro sin alias» con un prefijo corto del identificador. El alias es voluntario, no se importa de Keycloak y no debe incluir datos reales.
+- Los alias activos tienen unicidad sin distinguir mayúsculas/minúsculas dentro de cada empresa; la base de datos rechaza suplantaciones por duplicado.
 - Los datos agregados se mantienen en los límites de la empresa; la página y los recursos siguen protegidos por sesión y banderas de staging.
 - No se han implementado nombres de usuario provenientes de Keycloak, perfiles reales ni subida de ficheros. Esos cambios requieren un diseño de identidad y privacidad independiente.
 - No modificar `render.yaml`, `Dockerfile.demo` ni las variables de la demo pública.
@@ -23,7 +25,18 @@
 - `PYTHONPATH=src pytest -q tests/test_staging_browser_e2e.py` con PostgreSQL efímero y Playwright en CI comprueba las cifras sobre historial totalmente ficticio y que no pasan de una empresa a otra.
 - La CI existente ejecuta comprobaciones de sintaxis JavaScript y pruebas Python; el workflow opcional de SaaS incluye PostgreSQL 16, roles y navegador real.
 
-Para actualizar un entorno privado local **ya creado**, después del merge ejecutar desde su directorio de proyecto:
+### Actualización no destructiva de PostgreSQL existente
+
+**IMPORTANTE:** Para entornos ya creados con la v2.2, los scripts de `docker-entrypoint-initdb.d` NO se vuelven a ejecutar porque el volumen contiene datos. Aplica la migración 0004 **una vez como superusuario local de migraciones**, después del merge/`git pull`, **antes** de iniciar la imagen nueva. Usa la misma instalación Compose:
+
+```powershell
+git pull --ff-only
+docker compose --env-file .env.staging.local -f compose.private-staging.yml up -d db
+docker compose --env-file .env.staging.local -f compose.private-staging.yml exec -T db psql -U postgres -d churn_saas_staging -v ON_ERROR_STOP=1 -f /churn-migrations/0004_member_aliases.sql
+docker compose --env-file .env.staging.local -f compose.private-staging.yml up -d --build app
+```
+
+Esta migración añade una columna anulable y dos funciones SQL; **no borra** empresas, invitaciones, usuarios ni historial existente. **No la ejecutes dos veces**: es una migración de esquema versionada. Confirma previamente que estás en tu entorno de pruebas privado y realiza una copia de seguridad si necesitas conservarlo.
 
 ```powershell
 git pull --ff-only
