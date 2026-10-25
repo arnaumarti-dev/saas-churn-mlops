@@ -187,3 +187,8 @@ Keycloak official references:
 
 Caddy reference:
 - https://caddyserver.com/docs/caddyfile/directives/tls
+
+
+## Extensión v2.3: alias ficticios de equipo
+
+La versión 2.3 necesita `db/migrations/0004_member_aliases.sql` para añadir alias personales por empresa. En bases de datos persistentes los scripts `initdb` no se aplican otra vez: sigue el procedimiento de migración **no destructiva** de [`private-tenant-overview-v23.md`](private-tenant-overview-v23.md) antes de reiniciar la imagen nueva. No borres los volúmenes de PostgreSQL, Keycloak ni Caddy.
