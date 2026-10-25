@@ -89,6 +89,9 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="overview-runs"' in html.text
         assert 'id="overview-profiles"' in html.text
         assert 'id="overview-rate"' in html.text
+        assert 'id="run-period"' in html.text
+        assert 'id="trend-plot"' in html.text
+        assert 'id="trend-delta"' in html.text
         assert 'id="redeem-invite"' in html.text
         assert 'id="alias-tools"' in html.text
         assert 'id="alias-input"' in html.text
@@ -108,7 +111,10 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert "sessionStorage" not in js
         assert "window.confirm" in js
         assert "currentId !== tenantId" in js
-        assert "renderOverview(result.runs)" in js
+        assert "renderHistory()" in js
+        assert "runsCache = Array.isArray(result.runs)" in js
+        assert "requestId !== runsRequest" in js
+        assert "createElement" in js
         assert 'member.alias || "Miembro sin alias' in js
         assert "/me/alias" in js
         assert "credentials: \"same-origin\"" in js
