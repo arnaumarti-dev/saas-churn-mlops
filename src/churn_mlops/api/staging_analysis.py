@@ -6,6 +6,7 @@ Server-owned summary metadata is inserted under PostgreSQL tenant RLS.
 """
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -50,8 +51,37 @@ SYNTHETIC_PROFILES = BatchPredictionRequest(customers=[
 ])
 
 
+
+# Curated *fictional* examples selected by server-owned scenario keys.
+SYNTHETIC_SCENARIOS = {
+    "baseline": SYNTHETIC_PROFILES,
+    "at_risk": BatchPredictionRequest(customers=[
+        {**_BASE, "tenure": 1, "MonthlyCharges": 95.0, "TotalCharges": 95.0},
+        {**_BASE, "tenure": 3, "SeniorCitizen": 1,
+         "MultipleLines": "Yes", "MonthlyCharges": 108.0, "TotalCharges": 324.0},
+        {**_BASE, "tenure": 6, "StreamingTV": "Yes", "StreamingMovies": "Yes",
+         "MonthlyCharges": 103.0, "TotalCharges": 618.0},
+    ]),
+    "loyal": BatchPredictionRequest(customers=[
+        {**_BASE, "tenure": 48, "Contract": "Two year", "InternetService": "DSL",
+         "OnlineSecurity": "Yes", "TechSupport": "Yes", "PaperlessBilling": "No",
+         "PaymentMethod": "Bank transfer (automatic)",
+         "MonthlyCharges": 65.0, "TotalCharges": 3120.0},
+        {**_BASE, "tenure": 72, "Contract": "Two year", "Partner": "Yes",
+         "Dependents": "Yes", "OnlineBackup": "Yes", "DeviceProtection": "Yes",
+         "OnlineSecurity": "Yes", "TechSupport": "Yes",
+         "PaymentMethod": "Credit card (automatic)",
+         "MonthlyCharges": 72.0, "TotalCharges": 5184.0},
+        {**_BASE, "tenure": 36, "Contract": "One year", "Partner": "Yes",
+         "InternetService": "DSL", "OnlineSecurity": "Yes", "TechSupport": "Yes",
+         "PaymentMethod": "Bank transfer (automatic)",
+         "MonthlyCharges": 59.0, "TotalCharges": 2124.0},
+    ]),
+}
+
 class EmptySyntheticRun(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    scenario: Literal["baseline", "at_risk", "loyal"] = "baseline"
 
 
 def _database():
@@ -105,7 +135,7 @@ def list_synthetic_runs(
         with _tenant_connection(principal, tenant_id) as conn:
             _active_role(conn, principal, tenant_id)
             rows = conn.execute(
-                """SELECT id, total_profiles, over_threshold, created_at
+                """SELECT id, total_profiles, over_threshold, scenario_key, created_at
                    FROM saas.sandbox_runs
                    WHERE tenant_id = %s ORDER BY created_at DESC, id DESC
                    LIMIT 20""",
@@ -117,8 +147,8 @@ def list_synthetic_runs(
         "tenant_id": str(tenant_id), "synthetic_only": True,
         "runs": [
             {"id": str(run_id), "total_profiles": total,
-             "high_risk_customers": high_risk, "created_at": created.isoformat()}
-            for run_id, total, high_risk, created in rows
+             "high_risk_customers": high_risk, "scenario": scenario, "created_at": created.isoformat()}
+            for run_id, total, high_risk, scenario, created in rows
         ],
     }
 
@@ -141,16 +171,17 @@ def score_synthetic_sample(
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
             # Score only the fixed examples. A missing model fails closed (503),
             # and must not insert a fake/stale history record.
-            result = _score_batch(SYNTHETIC_PROFILES)
+            result = _score_batch(SYNTHETIC_SCENARIOS[payload.scenario])
             summary: BatchSummary = result.summary
             run_id = uuid4()
             conn.execute(
                 """INSERT INTO saas.sandbox_runs
-                   (id, tenant_id, created_by_subject, total_profiles, over_threshold)
-                   VALUES (%s, %s, %s, %s, %s)""",
+                   (id, tenant_id, created_by_subject, total_profiles, over_threshold, scenario_key)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
                 (
                     run_id, tenant_id, principal.subject,
                     summary.total_customers, summary.high_risk_customers,
+                    payload.scenario,
                 ),
             )
     except psycopg.Error as exc:
@@ -158,6 +189,6 @@ def score_synthetic_sample(
 
     return {
         "id": str(run_id), "tenant_id": str(tenant_id),
-        "synthetic_only": True,
+        "synthetic_only": True, "scenario": payload.scenario,
         "summary": summary.model_dump(),
     }
