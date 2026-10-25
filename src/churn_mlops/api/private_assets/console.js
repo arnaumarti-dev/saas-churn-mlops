@@ -10,6 +10,8 @@
   const picker = $("org-picker");
   let organizations = [];
   let currentId = "";
+  let runsCache = [];
+  let runsRequest = 0;
 
   function message(text, error = false) {
     feedback.textContent = text;
@@ -94,9 +96,10 @@
     $("alias-tools").hidden = !org;
     $("alias-input").value = org?.alias || "";
     $("overview-org-name").textContent = org ? org.name : "";
-    renderOverview([]);
+    runsCache = [];
+    runsRequest += 1; // Invalidate in-flight requests for previously selected companies.
+    renderHistory();
     $("analysis-tools").hidden = !org;
-    $("run-list").replaceChildren();
     $("analysis-result").replaceChildren();
     $("analysis-result").hidden = true;
     $("run-sample").disabled = !org || !["owner", "analyst"].includes(org.role);
@@ -190,63 +193,131 @@
     for (const member of data.members) members.append(memberRow(member, tenantId));
   }
 
+  function validRun(run) {
+    const total = Number(run.total_profiles);
+    const high = Number(run.high_risk_customers);
+    const when = Date.parse(run.created_at);
+    return Number.isInteger(total) && total >= 1 && total <= 200
+      && Number.isInteger(high) && high >= 0 && high <= total
+      && Number.isFinite(when);
+  }
+
+  function visibleRuns() {
+    // Server returns no more than 20, newest first. Never claim a full-period search.
+    const period = $("run-period").value;
+    const cutoff = period === "7" || period === "30"
+      ? Date.now() - Number(period) * 86400000 : -Infinity;
+    return runsCache.filter((run) => validRun(run) && Date.parse(run.created_at) >= cutoff);
+  }
+
   function renderOverview(runs) {
-    // History contains up to 20 aggregate synthetic runs, not unique customers.
-    const safe = Array.isArray(runs) ? runs.slice(0, 20) : [];
-    let profiles = 0;
-    let highRisk = 0;
-    for (const run of safe) {
-      const total = Number(run.total_profiles);
-      const high = Number(run.high_risk_customers);
-      if (!Number.isInteger(total) || total < 1 || total > 200
-          || !Number.isInteger(high) || high < 0 || high > total) continue;
-      profiles += total;
-      highRisk += high;
-    }
-    $("overview-runs").textContent = String(safe.length);
+    const profiles = runs.reduce((sum, run) => sum + Number(run.total_profiles), 0);
+    const highRisk = runs.reduce((sum, run) => sum + Number(run.high_risk_customers), 0);
+    $("overview-runs").textContent = String(runs.length);
     $("overview-profiles").textContent = String(profiles);
     $("overview-highrisk").textContent = String(highRisk);
     $("overview-rate").textContent = profiles
       ? (highRisk * 100 / profiles).toFixed(1) + "%" : "—";
-    $("overview-state").textContent = safe.length
-      ? "Resultados agregados de pruebas repetidas, no de clientes distintos."
-      : "Todavía no hay análisis. Ejecuta los tres perfiles ficticios para comenzar.";
+    $("overview-state").textContent = runs.length
+      ? "Indicadores del filtro actual: ejecuciones sintéticas repetidas, no clientes distintos."
+      : "No hay análisis en el periodo seleccionado.";
+  }
+
+  function riskPercentage(run) {
+    return 100 * Number(run.high_risk_customers) / Number(run.total_profiles);
+  }
+
+  function renderTrend(runs) {
+    const plot = $("trend-plot");
+    plot.replaceChildren();
+    if (runs.length < 2) {
+      $("trend-delta").textContent = "Se necesitan dos ejecuciones para comparar.";
+    } else {
+      const difference = riskPercentage(runs[0]) - riskPercentage(runs[1]);
+      $("trend-delta").textContent = Math.abs(difference) < 0.05
+        ? "Sin cambio respecto al análisis anterior."
+        : (difference > 0 ? "Sube " : "Baja ") +
+          Math.abs(difference).toFixed(1) + " puntos porcentuales frente al anterior.";
+    }
+    if (!runs.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = "Todavía no hay datos para dibujar la evolución.";
+      plot.append(empty);
+      plot.setAttribute("aria-label", "Sin análisis en el periodo seleccionado");
+      return;
+    }
+    const bars = document.createElement("div");
+    bars.className = "risk-bars";
+    const descriptions = [];
+    for (const [index, run] of runs.slice().reverse().entries()) {
+      const rate = riskPercentage(run);
+      const date = new Date(run.created_at).toLocaleDateString("es-ES");
+      const label = "Ejecución " + (index + 1) + " · " + date + " · " + rate.toFixed(1) + "%";
+      descriptions.push(label);
+      const item = document.createElement("div");
+      item.className = "risk-bar";
+      item.title = label;
+      const rateText = document.createElement("strong");
+      rateText.className = "risk-bar-value";
+      rateText.textContent = rate.toFixed(1) + "%";
+      const column = document.createElement("div");
+      column.className = "risk-bar-column";
+      const fill = document.createElement("span");
+      fill.className = "risk-bar-fill";
+      // Percentages come from integer DB constraints; no untrusted style values.
+      fill.style.height = rate.toFixed(1) + "%";
+      column.append(fill);
+      const sequence = document.createElement("span");
+      sequence.className = "risk-bar-label";
+      sequence.textContent = "Nº " + (index + 1);
+      item.append(rateText, column, sequence);
+      bars.append(item);
+    }
+    plot.append(bars);
+    plot.setAttribute("aria-label", "Evolución cronológica del riesgo alto. " + descriptions.join(". "));
+  }
+
+  function renderHistory() {
+    const runs = visibleRuns();
+    renderOverview(runs);
+    renderTrend(runs);
+    const list = $("run-list");
+    list.replaceChildren();
+    if (!runs.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted small";
+      empty.textContent = runsCache.length
+        ? "No hay análisis en el periodo seleccionado."
+        : "Todavía no hay análisis guardados para esta empresa.";
+      list.append(empty);
+      return;
+    }
+    for (const run of runs) {
+      const row = document.createElement("div");
+      row.className = "member";
+      const when = new Date(run.created_at).toLocaleString("es-ES");
+      row.textContent = when + " · " + run.total_profiles +
+        " perfiles ficticios · " + run.high_risk_customers +
+        " riesgo alto · " + riskPercentage(run).toFixed(1) + "% alto";
+      list.append(row);
+    }
   }
 
   async function loadRuns() {
     const org = currentOrg();
     if (!org) return;
     const tenantId = org.tenant_id;
+    const requestId = ++runsRequest;
     const result = await api(
       "GET", "/saas/v3/organizations/" + encodeURIComponent(tenantId) + "/runs"
     );
-    if (currentId !== tenantId) return;
-    renderOverview(result.runs);
-    const list = $("run-list");
-    list.replaceChildren();
-    if (!Array.isArray(result.runs) || result.runs.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "muted small";
-      empty.textContent = "Todavía no hay análisis guardados para esta empresa.";
-      list.append(empty);
-      return;
-    }
-    for (const run of result.runs) {
-      const row = document.createElement("div");
-      row.className = "member";
-      const timestamp = new Date(run.created_at);
-      const when = Number.isNaN(timestamp.getTime())
-        ? "Fecha no disponible" : timestamp.toLocaleString("es-ES");
-      const total = Number(run.total_profiles);
-      const high = Number(run.high_risk_customers);
-      const percentage = Number.isInteger(total) && total > 0
-        && Number.isInteger(high) && high >= 0 && high <= total
-        ? " · " + (high * 100 / total).toFixed(1) + "% alto" : "";
-      row.textContent = when + " · " + run.total_profiles +
-        " perfiles ficticios · " + run.high_risk_customers + " riesgo alto" + percentage;
-      list.append(row);
-    }
+    if (currentId !== tenantId || requestId !== runsRequest) return;
+    runsCache = Array.isArray(result.runs) ? result.runs.slice(0, 20) : [];
+    renderHistory();
   }
+
+  $("run-period").addEventListener("change", renderHistory);
 
   $("refresh-runs").addEventListener("click", () => loadRuns().then(
     () => message("Historial actualizado."),
