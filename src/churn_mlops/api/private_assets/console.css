@@ -23,3 +23,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 #overview-org-name{overflow-wrap:anywhere}
 @media(max-width:1050px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.kpi-grid{grid-template-columns:1fr 1fr}.kpi{padding:.75rem}}
+
+/* Fictional per-company aliases keep OIDC subject UUIDs out of visible member lists. */
+#alias-tools{border-color:#345375}
+#alias-tools p{margin:.15rem 0 1rem}
