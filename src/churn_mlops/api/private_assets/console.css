@@ -27,3 +27,20 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 /* Fictional per-company aliases keep OIDC subject UUIDs out of visible member lists. */
 #alias-tools{border-color:#345375}
 #alias-tools p{margin:.15rem 0 1rem}
+
+/* v2.4: local-only synthetic history filters, comparison and accessible CSS chart. */
+.history-controls{display:grid;gap:.35rem;max-width:330px;margin-top:1.15rem}
+.history-controls label{font-size:.82rem;font-weight:700}
+.history-controls select{width:100%;border:1px solid #4d5a70;background:#0e1725;color:var(--ink);padding:.65rem;border-radius:8px}
+.history-controls p{margin:.2rem 0 .5rem}
+.trend-section{margin-top:1.4rem;border-top:1px solid var(--border);padding-top:1.2rem}
+.trend-section .section-title h3{font-size:1rem;margin:0}
+.trend-section .section-title p{margin:0}
+.trend-section>p{margin:.4rem 0 .75rem}
+.trend-plot{min-height:186px;overflow-x:auto;border-radius:10px;padding:.65rem;background:#0e1725;border:1px solid var(--border)}
+.risk-bars{display:flex;align-items:stretch;gap:.65rem;width:max-content;min-width:100%;padding:.3rem}
+.risk-bar{width:58px;display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.risk-bar-value{font-size:.75rem;font-variant-numeric:tabular-nums}
+.risk-bar-column{width:32px;height:108px;border-radius:5px 5px 0 0;background:#202c43;display:flex;align-items:flex-end;overflow:hidden}
+.risk-bar-fill{display:block;width:100%;background:linear-gradient(0deg,#3778dc,#80c7fe);border-radius:5px 5px 0 0}
+.risk-bar-label{font-size:.7rem;color:var(--muted)}
