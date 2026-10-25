@@ -171,6 +171,44 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#owner-tools")).to_be_visible()
         expect(owner.locator("#invite-tools")).to_be_visible()
         expect(owner.locator(".member").filter(has_text=owner_subject)).to_be_visible()
+        expect(owner.locator("#overview-org-name")).to_have_text(name)
+        expect(owner.locator("#overview-tools")).to_be_visible()
+        expect(owner.locator("#overview-runs")).to_have_text("0")
+        expect(owner.locator("#overview-rate")).to_have_text("—")
+
+        # Test the aggregate dashboard with synthetic, mocked history.
+        # This test has NO inference model or real customer records.
+        org_a = owner.locator("#org-picker").input_value()
+        history_a = {
+            "runs": [
+                {"id": str(uuid4()), "total_profiles": 3,
+                 "high_risk_customers": 2, "created_at": "2026-10-25T01:00:00+00:00"},
+                {"id": str(uuid4()), "total_profiles": 3,
+                 "high_risk_customers": 1, "created_at": "2026-10-24T01:00:00+00:00"},
+            ]
+        }
+
+        def fake_history(route):
+            payload = history_a if f"/{org_a}/" in route.request.url else {"runs": []}
+            route.fulfill(status=200, json=payload)
+
+        owner.route("**/saas/v3/organizations/*/runs", fake_history)
+        owner.locator("#refresh-runs").click()
+        expect(owner.locator("#overview-runs")).to_have_text("2")
+        expect(owner.locator("#overview-profiles")).to_have_text("6")
+        expect(owner.locator("#overview-highrisk")).to_have_text("3")
+        expect(owner.locator("#overview-rate")).to_have_text("50.0%")
+        expect(owner.locator("#run-list .member")).to_have_count(2)
+
+        # Switching companies must reset every KPI, never reuse previous totals.
+        owner.locator("#org-name").fill("Segunda empresa ficticia")
+        owner.locator('#create-org button[type="submit"]').click()
+        expect(owner.locator("#overview-org-name")).to_have_text("Segunda empresa ficticia")
+        expect(owner.locator("#overview-runs")).to_have_text("0")
+        expect(owner.locator("#overview-profiles")).to_have_text("0")
+        expect(owner.locator("#overview-rate")).to_have_text("—")
+        owner.locator("#org-picker").select_option(org_a)
+        expect(owner.locator("#overview-rate")).to_have_text("50.0%")
 
         # Capture ONLY synthetic, non-secret data; no invitation code is shown.
         folder = Path("test-results/private-staging-qa")
