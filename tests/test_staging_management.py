@@ -193,3 +193,53 @@ def test_expired_invite_and_no_cross_tenant_owner_access(config):
                        "WHERE token_hash=%s", (digest,))
         assert post(b, "/saas/v3/invitations/accept", {"code": code}).status_code == 403
         assert not any(x["tenant_id"] == one for x in login._my_orgs(login.Principal(ISSUER, person_b)))
+
+
+@pytest.mark.skipif(not os.getenv("CHURN_TEST_DB_ADMIN_URL"), reason="Ephemeral PostgreSQL required")
+def test_fictional_alias_is_self_only_unique_per_tenant_and_revocable(config):
+    owner_id, viewer_id, outsider_id = (str(uuid4()) for _ in range(3))
+    with browser(owner_id) as owner, browser(viewer_id) as viewer, browser(outsider_id) as outsider:
+        company = post(owner, "/saas/v3/organizations", {"name": "AliasCo"}).json()["tenant_id"]
+        another = post(owner, "/saas/v3/organizations", {"name": "SecondCo"}).json()["tenant_id"]
+        alias_url = f"/saas/v3/organizations/{company}/me/alias"
+        headers = {"Origin": "https://testserver"}
+
+        # Every member can change only their own fictional alias.
+        assert owner.put(alias_url, json={"alias": "Ana Demo"}).status_code == 403
+        assert owner.put(alias_url, json={"alias": "A"}, headers=headers).status_code == 422
+        assert owner.put(alias_url, json={"alias": "Ana@personal.com"}, headers=headers).status_code == 422
+        assert outsider.put(alias_url, json={"alias": "Intruso"}, headers=headers).status_code == 403
+        saved = owner.put(alias_url, json={"alias": "  Ana Demo  "}, headers=headers)
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["alias"] == "Ana Demo"
+        my_orgs = owner.get("/saas/v3/organizations/list").json()["organizations"]
+        assert next(o for o in my_orgs if o["tenant_id"] == company)["alias"] == "Ana Demo"
+        assert next(o for o in my_orgs if o["tenant_id"] == another)["alias"] is None
+
+        token = post(owner, f"/saas/v3/organizations/{company}/invitations",
+                     {"role": "viewer"}).json()["code"]
+        assert post(viewer, "/saas/v3/invitations/accept", {"code": token}).status_code == 200
+        viewer_saved = viewer.put(alias_url, json={"alias": "Luis Demo"}, headers=headers)
+        assert viewer_saved.status_code == 200, viewer_saved.text
+        assert viewer.get(f"/saas/v3/organizations/{company}/members").status_code == 403
+        listing = owner.get(f"/saas/v3/organizations/{company}/members")
+        assert listing.status_code == 200
+        members = {item["subject"]: item for item in listing.json()["members"]}
+        assert members[owner_id]["alias"] == "Ana Demo"
+        assert members[viewer_id]["alias"] == "Luis Demo"
+
+        # Duplicate aliases cannot trick owners into editing a lookalike account.
+        duplicate = viewer.put(alias_url, json={"alias": "ana demo"}, headers=headers)
+        assert duplicate.status_code == 409, duplicate.text
+        assert outsider.get(f"/saas/v3/organizations/{company}/members").status_code == 403
+        assert owner.get(f"/saas/v3/organizations/{another}/members").json()["members"][0]["alias"] is None
+
+        # Revoked members cannot rename themselves or access membership details.
+        assert delete(owner, f"/saas/v3/organizations/{company}/members/{viewer_id}").status_code == 200
+        assert viewer.put(alias_url, json={"alias": "Luis V2"}, headers=headers).status_code == 403
+        assert viewer.get("/saas/v3/organizations/list").json()["organizations"] == []
+
+        # App credentials have no direct UPDATE permission, including aliases.
+        with psycopg.connect(os.environ["CHURN_TEST_DB_APP_URL"]) as db:
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                db.execute("UPDATE saas.memberships SET display_alias = 'Forged'")
