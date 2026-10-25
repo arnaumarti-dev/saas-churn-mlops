@@ -18,6 +18,7 @@ from cryptography.fernet import Fernet
 from churn_mlops.api.main import app
 from churn_mlops.api import main as api_main
 from churn_mlops.api import staging_login as login
+from churn_mlops.api import staging_analysis as analysis
 
 ISSUER = "https://login.example.org/"
 BASE = "/saas/v3"
@@ -90,6 +91,8 @@ def test_valid_session_and_same_origin_required(config):
             headers={"Origin": "https://not-trusted.example"}
         ).status_code == 403
         assert sample(actor, tenant, {"customers": []}).status_code == 422
+        assert sample(actor, tenant, {"scenario": "invented"}).status_code == 422
+        assert sample(actor, tenant, {"scenario": "loyal", "customers": []}).status_code == 422
 
 
 @pytest.mark.skipif(not os.getenv("CHURN_TEST_DB_ADMIN_URL"), reason="Ephemeral PostgreSQL required")
@@ -127,6 +130,7 @@ def test_synthetic_runs_are_tenant_scoped_and_role_authorized(config, monkeypatc
         assert created.status_code == 201, created.text
         response = created.json()
         assert response["synthetic_only"] is True
+        assert response["scenario"] == "baseline"
         assert response["summary"]["total_customers"] == 3
         assert response["summary"]["high_risk_customers"] == 2
         assert len(response["id"]) == 36
@@ -137,6 +141,7 @@ def test_synthetic_runs_are_tenant_scoped_and_role_authorized(config, monkeypatc
         assert len(runs.json()["runs"]) == 1
         assert runs.json()["runs"][0]["high_risk_customers"] == 2
         assert runs.json()["runs"][0]["total_profiles"] == 3
+        assert runs.json()["runs"][0]["scenario"] == "baseline"
         assert "created_by_subject" not in str(runs.json())
 
         issued = owner.post(
@@ -156,8 +161,16 @@ def test_synthetic_runs_are_tenant_scoped_and_role_authorized(config, monkeypatc
             f"{BASE}/organizations/{tenant_a}/members/{viewer_name}",
             json={"role": "analyst"}, headers={"Origin": "https://testserver"},
         ).status_code == 200
-        assert sample(viewer, tenant_a).status_code == 201
+        loyal_run = sample(viewer, tenant_a, {"scenario": "loyal"})
+        assert loyal_run.status_code == 201
+        assert loyal_run.json()["scenario"] == "loyal"
         assert len(owner.get(f"{BASE}/organizations/{tenant_a}/runs").json()["runs"]) == 2
+        risky_run = sample(owner, tenant_a, {"scenario": "at_risk"})
+        assert risky_run.status_code == 201
+        assert risky_run.json()["scenario"] == "at_risk"
+        keys = [run["scenario"] for run in owner.get(
+            f"{BASE}/organizations/{tenant_a}/runs").json()["runs"]]
+        assert set(keys) == {"baseline", "loyal", "at_risk"}
         assert outsider.get(f"{BASE}/organizations/{tenant_b}/runs").json()["runs"] == []
 
         assert owner.delete(
@@ -172,7 +185,7 @@ def test_synthetic_runs_are_tenant_scoped_and_role_authorized(config, monkeypatc
                 "SELECT count(*), sum(total_profiles), sum(over_threshold) "
                 "FROM saas.sandbox_runs WHERE tenant_id=%s", (tenant_a,)
             ).fetchone()
-            assert row == (2, 6, 4)
+            assert row == (3, 9, 6)
         with psycopg.connect(os.environ["CHURN_TEST_DB_APP_URL"]) as db:
             assert db.execute("SELECT count(*) FROM saas.sandbox_runs").fetchone()[0] == 0
 
@@ -191,3 +204,15 @@ def test_missing_model_does_not_create_history(config, monkeypatch):
         tenant = result.json()["tenant_id"]
         assert sample(owner, tenant).status_code == 503
         assert owner.get(f"{BASE}/organizations/{tenant}/runs").json()["runs"] == []
+
+
+def test_server_curated_scenarios_are_distinct_and_have_no_client_fields():
+    assert set(analysis.SYNTHETIC_SCENARIOS) == {"baseline", "at_risk", "loyal"}
+    scenarios = analysis.SYNTHETIC_SCENARIOS
+    assert all(len(item.customers) == 3 for item in scenarios.values())
+    first_tenures = [scenarios[k].customers[0].tenure
+                     for k in ("baseline", "at_risk", "loyal")]
+    assert first_tenures == [2, 1, 48]
+    assert all(customer.MonthlyCharges >= 0 and customer.TotalCharges >= 0
+               for scenario in scenarios.values() for customer in scenario.customers)
+    assert analysis.EmptySyntheticRun().scenario == "baseline"
