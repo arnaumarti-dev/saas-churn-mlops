@@ -44,3 +44,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .risk-bar-column{width:32px;height:108px;border-radius:5px 5px 0 0;background:#202c43;display:flex;align-items:flex-end;overflow:hidden}
 .risk-bar-fill{display:block;width:100%;background:linear-gradient(0deg,#3778dc,#80c7fe);border-radius:5px 5px 0 0}
 .risk-bar-label{font-size:.7rem;color:var(--muted)}
+
+/* v2.5 — curated synthetic scenarios (never accepts or persists customer rows). */
+.scenario-picker{display:grid;gap:.4rem;margin:1rem 0;max-width:440px}
+.scenario-picker label{font-weight:700;font-size:.87rem}
+.scenario-picker select{width:100%;margin:.1rem 0;padding:.65rem;border:1px solid #4d5a70;background:#0e1725;color:var(--ink);border-radius:8px}
+.scenario-picker p{margin:.15rem 0 .4rem}
