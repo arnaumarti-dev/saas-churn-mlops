@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V1.9</p>
+      <p class="eyebrow">CHURN LAB · V2.2</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -79,6 +79,19 @@
             <p class="muted small">Cópialo ahora y entrégalo únicamente por un canal seguro a la persona autorizada. No se volverá a mostrar.</p>
             <button id="hide-code" type="button" class="secondary">Ocultar código</button>
           </div>
+        </section>
+        <section id="analysis-tools" class="panel" hidden>
+          <div class="section-title">
+            <h2>Análisis de churn · ejemplos</h2>
+            <button id="refresh-runs" class="secondary" type="button">Actualizar historial</button>
+          </div>
+          <p class="muted small">Solo perfiles ficticios incluidos en el servidor. Nunca se envían ni almacenan datos de clientes.</p>
+          <button id="run-sample" type="button">Analizar 3 perfiles de ejemplo</button>
+          <p id="run-permission-hint" class="muted small"></p>
+          <div id="analysis-result" class="analysis-summary" hidden aria-live="polite"></div>
+          <h3>Historial por empresa</h3>
+          <p class="muted small">Guardamos exclusivamente número de perfiles y riesgo agregado, no filas de clientes.</p>
+          <div id="run-list" class="members" aria-live="polite"></div>
         </section>
       </div>
     </div>

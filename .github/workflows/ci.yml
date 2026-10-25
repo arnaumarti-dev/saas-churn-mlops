@@ -17,6 +17,7 @@ jobs:
       - name: Validate dashboard JavaScript syntax
         run: |
           node --check src/churn_mlops/api/static/demo.js
+          node --check src/churn_mlops/api/private_assets/console.js
           node --check src/churn_mlops/api/static/dashboard-utils.js
           node --test tests/test_dashboard_utils.cjs
           node --test tests/test_ui_behavior.cjs

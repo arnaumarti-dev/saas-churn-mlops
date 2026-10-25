@@ -12,6 +12,9 @@ on:
       - "src/churn_mlops/api/staging_login.py"
       - "src/churn_mlops/api/staging_management.py"
       - "src/churn_mlops/api/staging_console.py"
+      - "src/churn_mlops/api/staging_analysis.py"
+      - "tests/test_staging_analysis.py"
+      - "dev/private-staging/Dockerfile"
       - "src/churn_mlops/api/private_assets/**"
       - "tests/test_staging_console.py"
       - "tests/test_staging_browser_e2e.py"
@@ -75,7 +78,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
             -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname='churn_saas_app';"
       - name: Verify RSA token validation and live cross-tenant RLS
-        run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py tests/test_staging_login.py tests/test_staging_management.py tests/test_staging_console.py
+        run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py tests/test_staging_login.py tests/test_staging_management.py tests/test_staging_console.py tests/test_staging_analysis.py
       - name: Install Chromium browser test dependency
         run: |
           pip install playwright==1.56.0

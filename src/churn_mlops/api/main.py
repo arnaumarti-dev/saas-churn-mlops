@@ -10,6 +10,7 @@ from churn_mlops.api.security import SecurityMiddleware
 from churn_mlops.api.staging_login import router as staging_login_router
 from churn_mlops.api.staging_management import router as staging_management_router
 from churn_mlops.api.staging_console import router as staging_console_router
+from churn_mlops.api.staging_analysis import router as staging_analysis_router
 from churn_mlops.api.oidc_postgres import (
     Principal,
     get_oidc_principal,
@@ -42,6 +43,7 @@ app.add_middleware(SecurityMiddleware)
 app.include_router(staging_login_router)
 app.include_router(staging_management_router)
 app.include_router(staging_console_router)
+app.include_router(staging_analysis_router)
 app.state.model = None
 
 
