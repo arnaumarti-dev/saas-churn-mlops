@@ -63,6 +63,24 @@
     return el;
   }
 
+  function scenarioLabel(key) {
+    return ({
+      baseline: "Mixto", at_risk: "Riesgo potencial", loyal: "Fidelización"
+    })[key] || "Mixto";
+  }
+
+  function scenarioHelp(key) {
+    return ({
+      baseline: "Tres ejemplos originales con distintas condiciones.",
+      at_risk: "Tres casos ficticios de contratos mensuales y poca antigüedad.",
+      loyal: "Tres casos ficticios de contratos largos y mayor antigüedad."
+    })[key] || "Selecciona un escenario ficticio.";
+  }
+
+  $("run-scenario").addEventListener("change", () => {
+    $("scenario-explanation").textContent = scenarioHelp($("run-scenario").value);
+  });
+
   function roleLabel(role) {
     return ({ owner: "Propietario", analyst: "Analista", viewer: "Lector" })[role] || "Sin permisos";
   }
@@ -102,6 +120,8 @@
     $("analysis-tools").hidden = !org;
     $("analysis-result").replaceChildren();
     $("analysis-result").hidden = true;
+    $("run-scenario").value = "baseline";
+    $("scenario-explanation").textContent = scenarioHelp("baseline");
     $("run-sample").disabled = !org || !["owner", "analyst"].includes(org.role);
     $("run-permission-hint").textContent = !org ? "" : org.role === "viewer"
       ? "Tu rol de lector permite consultar el historial, pero no ejecutar análisis."
@@ -232,6 +252,8 @@
     plot.replaceChildren();
     if (runs.length < 2) {
       $("trend-delta").textContent = "Se necesitan dos ejecuciones para comparar.";
+    } else if ((runs[0].scenario || "baseline") !== (runs[1].scenario || "baseline")) {
+      $("trend-delta").textContent = "Escenarios distintos: la diferencia no mide una evolución temporal.";
     } else {
       const difference = riskPercentage(runs[0]) - riskPercentage(runs[1]);
       $("trend-delta").textContent = Math.abs(difference) < 0.05
@@ -253,7 +275,8 @@
     for (const [index, run] of runs.slice().reverse().entries()) {
       const rate = riskPercentage(run);
       const date = new Date(run.created_at).toLocaleDateString("es-ES");
-      const label = "Ejecución " + (index + 1) + " · " + date + " · " + rate.toFixed(1) + "%";
+      const label = "Ejecución " + (index + 1) + " · " + date + " · " +
+        scenarioLabel(run.scenario) + " · " + rate.toFixed(1) + "%";
       descriptions.push(label);
       const item = document.createElement("div");
       item.className = "risk-bar";
@@ -297,8 +320,8 @@
       const row = document.createElement("div");
       row.className = "member";
       const when = new Date(run.created_at).toLocaleString("es-ES");
-      row.textContent = when + " · " + run.total_profiles +
-        " perfiles ficticios · " + run.high_risk_customers +
+      row.textContent = when + " · " + scenarioLabel(run.scenario) + " · " +
+        run.total_profiles + " perfiles ficticios · " + run.high_risk_customers +
         " riesgo alto · " + riskPercentage(run).toFixed(1) + "% alto";
       list.append(row);
     }
@@ -328,16 +351,19 @@
     const org = currentOrg();
     if (!org || !["owner", "analyst"].includes(org.role)) return;
     const tenantId = org.tenant_id;
+    const scenario = $("run-scenario").value;
     $("run-sample").disabled = true;
+    $("run-scenario").disabled = true;
     try {
       const result = await api(
         "POST", "/saas/v3/organizations/" + encodeURIComponent(tenantId) +
-        "/runs/sample", {}
+        "/runs/sample", { scenario }
       );
       if (currentId !== tenantId) return;
       const summary = result.summary;
       const output = $("analysis-result");
-      output.textContent = summary.total_customers + " perfiles analizados · " +
+      output.textContent = scenarioLabel(result.scenario) + " · " +
+        summary.total_customers + " perfiles analizados · " +
         summary.high_risk_customers + " riesgo alto · " +
         summary.low_risk_customers + " riesgo bajo · Probabilidad media: " +
         (summary.average_churn_probability * 100).toFixed(1) + "%";
@@ -347,6 +373,7 @@
     } catch (error) {
       message(error.message, true);
     } finally {
+      $("run-scenario").disabled = false;
       $("run-sample").disabled = !currentOrg() ||
         !["owner", "analyst"].includes(currentOrg().role);
     }

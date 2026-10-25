@@ -78,6 +78,8 @@ jobs:
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
             -f db/migrations/0004_member_aliases.sql
           psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
+            -f db/migrations/0005_synthetic_scenarios.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d churn_saas_test \
             -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname='churn_saas_app';"
       - name: Verify RSA token validation and live cross-tenant RLS
         run: PYTHONPATH=src pytest -q tests/test_oidc_postgres.py tests/test_staging_login.py tests/test_staging_management.py tests/test_staging_console.py tests/test_staging_analysis.py

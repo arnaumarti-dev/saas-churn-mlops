@@ -183,6 +183,8 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#overview-tools")).to_be_visible()
         expect(owner.locator("#overview-runs")).to_have_text("0")
         expect(owner.locator("#overview-rate")).to_have_text("—")
+        expect(owner.locator("#run-scenario")).to_have_value("baseline")
+        expect(owner.locator("#run-scenario option")).to_have_count(3)
 
         # Test the aggregate dashboard with synthetic, mocked history.
         # This test has NO inference model or real customer records.
@@ -212,6 +214,15 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#run-list .member")).to_have_count(2)
         expect(owner.locator("#trend-plot .risk-bar")).to_have_count(2)
         expect(owner.locator("#trend-delta")).to_contain_text("Sube 33.3 puntos")
+        # The graph must distinguish different synthetic scenarios, not claim
+        # they show a real temporal change in one customer cohort.
+        history_a["runs"][0]["scenario"] = "at_risk"
+        owner.locator("#refresh-runs").click()
+        expect(owner.locator("#trend-delta")).to_contain_text("Escenarios distintos")
+        expect(owner.locator("#run-list")).to_contain_text("Riesgo potencial")
+        history_a["runs"][0]["scenario"] = "baseline"
+        owner.locator("#refresh-runs").click()
+        expect(owner.locator("#trend-delta")).to_contain_text("Sube 33.3 puntos")
 
         # Seven-day filter includes only the recent execution, not the
         # second run from 15 days ago. Thirty days includes both.
@@ -229,6 +240,35 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#overview-rate")).to_have_text("50.0%")
         expect(owner.locator("#trend-plot .risk-bar")).to_have_count(2)
         owner.locator("#run-period").select_option("all")
+
+        # Selecting a scenario sends only its fixed identifier; the browser
+        # cannot submit any customer rows to the private sample endpoint.
+        submitted = []
+
+        def fake_sample(route):
+            submitted.append(route.request.post_data_json)
+            route.fulfill(status=201, json={
+                "synthetic_only": True,
+                "scenario": route.request.post_data_json["scenario"],
+                "summary": {
+                    "total_customers": 3, "high_risk_customers": 1,
+                    "low_risk_customers": 2, "average_churn_probability": 0.4,
+                },
+            })
+
+        owner.route("**/saas/v3/organizations/*/runs/sample", fake_sample)
+        owner.locator("#run-scenario").select_option("loyal")
+        expect(owner.locator("#scenario-explanation")).to_contain_text(
+            "contratos largos"
+        )
+        owner.locator("#run-sample").click()
+        expect(owner.locator("#analysis-result")).to_contain_text("Fidelización")
+        assert submitted == [{"scenario": "loyal"}]
+
+        owner.locator("#run-scenario").select_option("at_risk")
+        owner.locator("#run-sample").click()
+        expect(owner.locator("#analysis-result")).to_contain_text("Riesgo potencial")
+        assert submitted == [{"scenario": "loyal"}, {"scenario": "at_risk"}]
 
         # Switching companies must reset every KPI, never reuse previous totals.
         owner.locator("#org-name").fill("Segunda empresa ficticia")

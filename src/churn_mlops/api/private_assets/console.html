@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V2.4</p>
+      <p class="eyebrow">CHURN LAB · V2.5</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -123,12 +123,21 @@
             <h2>Análisis de churn · ejemplos</h2>
             <button id="refresh-runs" class="secondary" type="button">Actualizar historial</button>
           </div>
-          <p class="muted small">Solo perfiles ficticios incluidos en el servidor. Nunca se envían ni almacenan datos de clientes.</p>
-          <button id="run-sample" type="button">Analizar 3 perfiles de ejemplo</button>
+          <p class="muted small">Solo perfiles ficticios preparados en el servidor. Cambiar el escenario cambia las características de los ejemplos, no representa una evolución real de clientes.</p>
+          <div class="scenario-picker">
+            <label for="run-scenario">Escenario ficticio para analizar</label>
+            <select id="run-scenario" aria-describedby="scenario-explanation">
+              <option value="baseline">Mixto · ejemplos originales</option>
+              <option value="at_risk">Riesgo potencial · contratos cortos</option>
+              <option value="loyal">Fidelización · contratos largos</option>
+            </select>
+            <p id="scenario-explanation" class="muted small">Tres perfiles de prueba con condiciones variadas.</p>
+          </div>
+          <button id="run-sample" type="button">Analizar 3 perfiles ficticios</button>
           <p id="run-permission-hint" class="muted small"></p>
           <div id="analysis-result" class="analysis-summary" hidden aria-live="polite"></div>
           <h3>Historial por empresa</h3>
-          <p class="muted small">Lista de ejecuciones del periodo seleccionado. Solo guardamos recuentos y fechas, no filas de clientes.</p>
+          <p class="muted small">Cada ejecución guarda su escenario ficticio, fecha y recuentos agregados. Comparar escenarios no demuestra cambios reales del churn.</p>
           <div id="run-list" class="members" aria-live="polite"></div>
         </section>
       </div>
