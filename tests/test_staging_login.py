@@ -188,7 +188,7 @@ def test_organization_selector_isolated_by_identity_and_revocation(oidc, monkeyp
     assert {item["name"] for item in names} == {"Empresa A", "Empresa B"}
     assert {item["role"] for item in names} == {"owner", "viewer"}
     assert login._my_orgs(login.Principal(ISSUER, "other-person")) == [
-        {"tenant_id": str(a), "name": "Empresa A", "role": "analyst"}
+        {"tenant_id": str(a), "name": "Empresa A", "role": "analyst", "alias": None}
     ]
     assert login._my_orgs(login.Principal(ISSUER, "unknown-person")) == []
     # Current connection-local role context must not leak to the next connection.

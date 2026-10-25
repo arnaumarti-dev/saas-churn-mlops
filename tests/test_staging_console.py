@@ -85,7 +85,14 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert "/saas/v3/console.css" in html.text
         assert 'id="issue-invite"' in html.text
         assert 'id="create-org"' in html.text
+        assert 'id="overview-tools"' in html.text
+        assert 'id="overview-runs"' in html.text
+        assert 'id="overview-profiles"' in html.text
+        assert 'id="overview-rate"' in html.text
         assert 'id="redeem-invite"' in html.text
+        assert 'id="alias-tools"' in html.text
+        assert 'id="alias-input"' in html.text
+        assert 'id="save-alias"' in html.text
         assert "console-" not in html.text  # never embed OIDC subjects
         assert "noindex" in html.text
         assert "<script defer src=" in html.text
@@ -100,6 +107,10 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert "localStorage" not in js
         assert "sessionStorage" not in js
         assert "window.confirm" in js
+        assert "currentId !== tenantId" in js
+        assert "renderOverview(result.runs)" in js
+        assert 'member.alias || "Miembro sin alias' in js
+        assert "/me/alias" in js
         assert "credentials: \"same-origin\"" in js
 
 

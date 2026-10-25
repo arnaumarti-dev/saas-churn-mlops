@@ -170,7 +170,52 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#org-picker")).to_contain_text(name)
         expect(owner.locator("#owner-tools")).to_be_visible()
         expect(owner.locator("#invite-tools")).to_be_visible()
-        expect(owner.locator(".member").filter(has_text=owner_subject)).to_be_visible()
+        # A synthetic owner chooses a label; no full OIDC UUID is rendered.
+        owner.locator("#alias-input").fill("Ana Demo")
+        owner.locator('#save-alias button[type="submit"]').click()
+        expect(owner.locator("#feedback")).to_have_text(
+            "Alias actualizado para tu empresa de pruebas."
+        )
+        expect(owner.locator("#member-list .member").filter(has_text="Ana Demo")).to_be_visible()
+        assert owner_subject not in owner.locator("#member-list").inner_text()
+        expect(owner.locator("#overview-org-name")).to_have_text(name)
+        expect(owner.locator("#overview-tools")).to_be_visible()
+        expect(owner.locator("#overview-runs")).to_have_text("0")
+        expect(owner.locator("#overview-rate")).to_have_text("—")
+
+        # Test the aggregate dashboard with synthetic, mocked history.
+        # This test has NO inference model or real customer records.
+        org_a = owner.locator("#org-picker").input_value()
+        history_a = {
+            "runs": [
+                {"id": str(uuid4()), "total_profiles": 3,
+                 "high_risk_customers": 2, "created_at": "2026-10-25T01:00:00+00:00"},
+                {"id": str(uuid4()), "total_profiles": 3,
+                 "high_risk_customers": 1, "created_at": "2026-10-24T01:00:00+00:00"},
+            ]
+        }
+
+        def fake_history(route):
+            payload = history_a if f"/{org_a}/" in route.request.url else {"runs": []}
+            route.fulfill(status=200, json=payload)
+
+        owner.route("**/saas/v3/organizations/*/runs", fake_history)
+        owner.locator("#refresh-runs").click()
+        expect(owner.locator("#overview-runs")).to_have_text("2")
+        expect(owner.locator("#overview-profiles")).to_have_text("6")
+        expect(owner.locator("#overview-highrisk")).to_have_text("3")
+        expect(owner.locator("#overview-rate")).to_have_text("50.0%")
+        expect(owner.locator("#run-list .member")).to_have_count(2)
+
+        # Switching companies must reset every KPI, never reuse previous totals.
+        owner.locator("#org-name").fill("Segunda empresa ficticia")
+        owner.locator('#create-org button[type="submit"]').click()
+        expect(owner.locator("#overview-org-name")).to_have_text("Segunda empresa ficticia")
+        expect(owner.locator("#overview-runs")).to_have_text("0")
+        expect(owner.locator("#overview-profiles")).to_have_text("0")
+        expect(owner.locator("#overview-rate")).to_have_text("—")
+        owner.locator("#org-picker").select_option(org_a)
+        expect(owner.locator("#overview-rate")).to_have_text("50.0%")
 
         # Capture ONLY synthetic, non-secret data; no invitation code is shown.
         folder = Path("test-results/private-staging-qa")
@@ -181,7 +226,7 @@ def test_real_private_browser_organization_lifecycle(
         )
 
         # The database, not the UI, forbids the last owner losing ownership.
-        owner_row = owner.locator(".member").filter(has_text=owner_subject)
+        owner_row = owner.locator(".member").filter(has_text="Ana Demo")
         owner_row.locator("select").select_option("viewer")
         expect(owner.locator("#feedback")).to_have_text(
             "No tienes permisos para realizar esta acción."
@@ -205,6 +250,12 @@ def test_real_private_browser_organization_lifecycle(
         expect(member.locator("#org-picker")).to_contain_text(name)
         expect(member.locator("#owner-tools")).to_be_hidden()
         expect(member.locator("#invite-tools")).to_be_hidden()
+        expect(member.locator("#alias-tools")).to_be_visible()
+        member.locator("#alias-input").fill("Luis Demo")
+        member.locator('#save-alias button[type="submit"]').click()
+        expect(member.locator("#feedback")).to_have_text(
+            "Alias actualizado para tu empresa de pruebas."
+        )
 
         # A viewer may see their organization but not the owner's user list.
         org = owner.locator("#org-picker").input_value()
@@ -216,19 +267,20 @@ def test_real_private_browser_organization_lifecycle(
 
         # Owner can promote and revoke a member. UI re-reads actual DB state.
         owner.locator("#refresh-members").click()
-        member_row = owner.locator(".member").filter(has_text=member_subject)
+        member_row = owner.locator(".member").filter(has_text="Luis Demo")
         expect(member_row).to_be_visible()
+        assert member_subject not in owner.locator("#member-list").inner_text()
         member_row.locator("select").select_option("analyst")
         expect(owner.locator("#feedback")).to_have_text("Permisos actualizados.")
-        expect(owner.locator(".member").filter(has_text=member_subject)
+        expect(owner.locator(".member").filter(has_text="Luis Demo")
                .locator("select")).to_have_value("analyst")
 
         owner.once("dialog", lambda dialog: dialog.accept())
-        owner.locator(".member").filter(has_text=member_subject).get_by_role(
+        owner.locator(".member").filter(has_text="Luis Demo").get_by_role(
             "button", name="Revocar"
         ).click()
         expect(owner.locator("#feedback")).to_have_text("Acceso revocado.")
-        expect(owner.locator(".member").filter(has_text=member_subject)).to_have_count(0)
+        expect(owner.locator(".member").filter(has_text="Luis Demo")).to_have_count(0)
         member.locator("#refresh").click()
         expect(member.locator("#org-picker")).to_be_disabled()
         expect(member.locator("#owner-tools")).to_be_hidden()

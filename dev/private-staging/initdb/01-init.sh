@@ -20,7 +20,8 @@ SQL
 
 for migration in /churn-migrations/0001_saas_tenants_rls.sql \
                  /churn-migrations/0002_member_org_selector.sql \
-                 /churn-migrations/0003_organization_management.sql; do
+                 /churn-migrations/0003_organization_management.sql \
+                 /churn-migrations/0004_member_aliases.sql; do
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" \
       --dbname churn_saas_staging -f "$migration"
 done

@@ -58,6 +58,8 @@ def _sql(principal: Principal, statement: str, args: tuple):
                 # All SQL statements are fixed developer-owned literals.
                 # User inputs enter psycopg placeholders only.
                 return conn.execute(statement, args).fetchall()
+    except psycopg.errors.UniqueViolation as exc:
+        raise HTTPException(status_code=409, detail="Display alias already in use") from exc
     except psycopg.errors.RaiseException as exc:
         raise HTTPException(status_code=403, detail="Operation not allowed") from exc
     except psycopg.Error as exc:
@@ -78,6 +80,11 @@ class RedeemInvite(BaseModel):
 
 class MemberRole(BaseModel):
     role: str = Field(pattern="^(owner|analyst|viewer)$")
+
+
+class MemberAlias(BaseModel):
+    # An alias is chosen locally by the test account; no IdP PII is copied.
+    alias: str = Field(min_length=2, max_length=40)
 
 
 @router.post("/organizations", status_code=201)
@@ -127,11 +134,32 @@ def members(
 ):
     rows = _sql(
         principal,
-        "SELECT member_subject, member_role FROM saas.list_organization_members(%s)",
+        "SELECT member_subject, member_role, member_alias "
+        "FROM saas.list_organization_member_aliases(%s)",
         (tenant_id,),
     )
     return {"tenant_id": str(tenant_id),
-            "members": [{"subject": subject, "role": role} for subject, role in rows]}
+            "members": [
+                {"subject": subject, "role": role, "alias": alias}
+                for subject, role, alias in rows
+            ]}
+
+
+@router.put("/organizations/{tenant_id}/me/alias")
+def update_my_alias(
+    tenant_id: UUID, payload: MemberAlias, request: Request,
+    principal: Principal = Depends(_v18_principal),
+):
+    _check_origin(request)
+    alias = payload.alias.strip()
+    if (len(alias) < 2 or len(alias) > 40
+            or any(ord(char) < 32 or ord(char) == 127
+                   or char in "<>@" for char in alias)):
+        raise HTTPException(status_code=422, detail="Invalid fictional alias")
+    # Database function can update only the session's own active membership.
+    saved = _sql(principal, "SELECT saas.set_my_display_alias(%s, %s)",
+                 (tenant_id, alias))[0][0]
+    return {"tenant_id": str(tenant_id), "alias": saved}
 
 
 @router.patch("/organizations/{tenant_id}/members/{subject}")
