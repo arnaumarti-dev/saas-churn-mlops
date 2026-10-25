@@ -44,8 +44,8 @@ runtime. The public Render demo and its Dockerfile are unchanged.
 This build needs network access during training to fetch the public
 dataset and enough local disk/RAM to train the models.
 
-After **PR is merged** on GitHub, from your current Windows PowerShell
-in `C:\Users\arnau\proyectos\saas-churn-mlops`:
+After **PR is merged** on GitHub, from Windows PowerShell in your own
+cloned `saas-churn-mlops` repository directory:
 
 ```powershell
 git pull --ff-only
