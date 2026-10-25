@@ -90,6 +90,9 @@
     $("owner-tools").hidden = !owner;
     $("invite-tools").hidden = !owner;
     $("member-list").replaceChildren();
+    $("overview-tools").hidden = !org;
+    $("overview-org-name").textContent = org ? org.name : "";
+    renderOverview([]);
     $("analysis-tools").hidden = !org;
     $("run-list").replaceChildren();
     $("analysis-result").replaceChildren();
@@ -108,7 +111,7 @@
     if (org) await loadRuns();
   }
 
-  function memberRow(member) {
+  function memberRow(member, tenantId) {
     const item = document.createElement("div");
     item.className = "member";
     const name = document.createElement("span");
@@ -129,7 +132,7 @@
       const previous = member.role;
       roles.disabled = true;
       try {
-        await api("PATCH", "/saas/v3/organizations/" + encodeURIComponent(currentId)
+        await api("PATCH", "/saas/v3/organizations/" + encodeURIComponent(tenantId)
           + "/members/" + encodeURIComponent(member.subject), { role: roles.value });
         message("Permisos actualizados.");
         await reload(currentId);
@@ -149,7 +152,7 @@
       if (!window.confirm("¿Revocar el acceso de este miembro? Esta acción es inmediata.")) return;
       revoke.disabled = true;
       try {
-        await api("DELETE", "/saas/v3/organizations/" + encodeURIComponent(currentId)
+        await api("DELETE", "/saas/v3/organizations/" + encodeURIComponent(tenantId)
           + "/members/" + encodeURIComponent(member.subject));
         message("Acceso revocado.");
         await reload(currentId);
@@ -167,9 +170,12 @@
   async function loadMembers() {
     const org = currentOrg();
     if (!org || org.role !== "owner") return;
+    const tenantId = org.tenant_id;
     const data = await api(
-      "GET", "/saas/v3/organizations/" + encodeURIComponent(org.tenant_id) + "/members"
+      "GET", "/saas/v3/organizations/" + encodeURIComponent(tenantId) + "/members"
     );
+    // A slower response for company A must never paint over company B.
+    if (currentId !== tenantId || currentOrg()?.role !== "owner") return;
     const members = $("member-list");
     members.replaceChildren();
     if (!Array.isArray(data.members) || data.members.length === 0) {
@@ -178,7 +184,30 @@
       members.append(empty);
       return;
     }
-    for (const member of data.members) members.append(memberRow(member));
+    for (const member of data.members) members.append(memberRow(member, tenantId));
+  }
+
+  function renderOverview(runs) {
+    // History contains up to 20 aggregate synthetic runs, not unique customers.
+    const safe = Array.isArray(runs) ? runs.slice(0, 20) : [];
+    let profiles = 0;
+    let highRisk = 0;
+    for (const run of safe) {
+      const total = Number(run.total_profiles);
+      const high = Number(run.high_risk_customers);
+      if (!Number.isInteger(total) || total < 1 || total > 200
+          || !Number.isInteger(high) || high < 0 || high > total) continue;
+      profiles += total;
+      highRisk += high;
+    }
+    $("overview-runs").textContent = String(safe.length);
+    $("overview-profiles").textContent = String(profiles);
+    $("overview-highrisk").textContent = String(highRisk);
+    $("overview-rate").textContent = profiles
+      ? (highRisk * 100 / profiles).toFixed(1) + "%" : "—";
+    $("overview-state").textContent = safe.length
+      ? "Resultados agregados de pruebas repetidas, no de clientes distintos."
+      : "Todavía no hay análisis. Ejecuta los tres perfiles ficticios para comenzar.";
   }
 
   async function loadRuns() {
@@ -189,6 +218,7 @@
       "GET", "/saas/v3/organizations/" + encodeURIComponent(tenantId) + "/runs"
     );
     if (currentId !== tenantId) return;
+    renderOverview(result.runs);
     const list = $("run-list");
     list.replaceChildren();
     if (!Array.isArray(result.runs) || result.runs.length === 0) {
@@ -204,8 +234,13 @@
       const timestamp = new Date(run.created_at);
       const when = Number.isNaN(timestamp.getTime())
         ? "Fecha no disponible" : timestamp.toLocaleString("es-ES");
+      const total = Number(run.total_profiles);
+      const high = Number(run.high_risk_customers);
+      const percentage = Number.isInteger(total) && total > 0
+        && Number.isInteger(high) && high >= 0 && high <= total
+        ? " · " + (high * 100 / total).toFixed(1) + "% alto" : "";
       row.textContent = when + " · " + run.total_profiles +
-        " perfiles ficticios · " + run.high_risk_customers + " riesgo alto";
+        " perfiles ficticios · " + run.high_risk_customers + " riesgo alto" + percentage;
       list.append(row);
     }
   }
