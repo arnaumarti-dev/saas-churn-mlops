@@ -564,3 +564,14 @@ session; they are not linked from or publicly enabled in the portfolio
 demo. The service still needs a private OIDC identity provider and
 PostgreSQL to become interactive. See
 [docs/private-console-staging.md](docs/private-console-staging.md).
+
+## v2.0 candidate — Private real-browser integration checks
+
+Private browser CI now exercises the staging console in **desktop and mobile
+Chromium over HTTPS** with temporary PostgreSQL 16 and synthetic encrypted
+login cookies. The workflow covers creating a demo organization, issuing and
+accepting an invitation, checking that viewers cannot administer members,
+changing roles, revoking access and preserving the final owner. A hosted
+OIDC provider is still **not connected or tested**, and the public Render
+demo remains unchanged. See
+[docs/private-browser-e2e.md](docs/private-browser-e2e.md).
