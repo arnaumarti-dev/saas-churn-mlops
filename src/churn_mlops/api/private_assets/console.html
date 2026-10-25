@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V2.3</p>
+      <p class="eyebrow">CHURN LAB · V2.4</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -56,7 +56,16 @@
         <section id="overview-tools" class="panel" hidden aria-labelledby="overview-heading">
           <p class="eyebrow">RESUMEN POR EMPRESA</p>
           <h2 id="overview-heading">Actividad de <span id="overview-org-name"></span></h2>
-          <p class="muted small">Resumen de los últimos 20 análisis sintéticos disponibles de esta empresa. No son clientes únicos.</p>
+          <p class="muted small">Solo se consultan los últimos 20 análisis sintéticos de esta empresa. Las cifras representan pruebas repetidas, no clientes únicos.</p>
+          <div class="history-controls">
+            <label for="run-period">Filtrar resultados por fecha</label>
+            <select id="run-period" aria-describedby="period-hint">
+              <option value="all">Todos los disponibles (máx. 20)</option>
+              <option value="7">Últimos 7 días</option>
+              <option value="30">Últimos 30 días</option>
+            </select>
+            <p id="period-hint" class="muted small">El filtro solo se aplica a los 20 registros más recientes disponibles; no busca registros anteriores.</p>
+          </div>
           <div class="kpi-grid" aria-label="Indicadores agregados de pruebas">
             <div class="kpi"><span class="kpi-label">Análisis recientes</span><strong id="overview-runs">0</strong></div>
             <div class="kpi"><span class="kpi-label">Perfiles evaluados</span><strong id="overview-profiles">0</strong></div>
@@ -64,6 +73,14 @@
             <div class="kpi"><span class="kpi-label">Proporción de riesgo alto</span><strong id="overview-rate">—</strong></div>
           </div>
           <p id="overview-state" class="muted small" role="status" aria-live="polite"></p>
+          <div class="trend-section">
+            <div class="section-title">
+              <h3>Evolución del riesgo alto</h3>
+              <p id="trend-delta" class="muted small" aria-live="polite">Sin comparativa disponible.</p>
+            </div>
+            <p class="muted small">Cada barra corresponde a una ejecución ficticia, de la más antigua a la más reciente. Compara porcentajes, no clientes diferentes.</p>
+            <div id="trend-plot" class="trend-plot" role="img" aria-label="Sin análisis disponibles"></div>
+          </div>
         </section>
         <section id="alias-tools" class="panel" hidden>
           <h2>Mi nombre de pruebas</h2>
@@ -111,7 +128,7 @@
           <p id="run-permission-hint" class="muted small"></p>
           <div id="analysis-result" class="analysis-summary" hidden aria-live="polite"></div>
           <h3>Historial por empresa</h3>
-          <p class="muted small">Guardamos exclusivamente número de perfiles y riesgo agregado, no filas de clientes.</p>
+          <p class="muted small">Lista de ejecuciones del periodo seleccionado. Solo guardamos recuentos y fechas, no filas de clientes.</p>
           <div id="run-list" class="members" aria-live="polite"></div>
         </section>
       </div>
