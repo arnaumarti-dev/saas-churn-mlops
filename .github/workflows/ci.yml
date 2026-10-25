@@ -58,7 +58,7 @@ jobs:
           test -n "$(find artifacts -name '*_test_metrics.json' -size +0c -print -quit)"
       - name: Upload evaluation metrics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: evaluation-metrics
           path: artifacts/*_metrics.json

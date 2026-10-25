@@ -93,7 +93,7 @@ jobs:
         run: PYTHONPATH=src pytest -q tests/test_staging_browser_e2e.py
       - name: Upload synthetic private staging screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: churn-private-console-qa
           path: test-results/private-staging-qa/
