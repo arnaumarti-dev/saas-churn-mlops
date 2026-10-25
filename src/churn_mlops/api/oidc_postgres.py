@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 import os
+import re
 from urllib.parse import urlsplit
 
 from fastapi import Header, HTTPException
@@ -49,12 +50,25 @@ def settings() -> OIDCSettings:
     jwks_url = os.environ.get(JWKS, "")
     dsn = os.environ.get(DATABASE, "")
     i, j = urlsplit(issuer), urlsplit(jwks_url)
+    # Keep the operator-pinned HTTPS host policy. Support Keycloak's
+    # standard realm JWKS location as well as existing .well-known JWKS.
+    # The Keycloak suffix must belong to the EXACT configured issuer realm;
+    # do not allow caller-controlled arbitrary JWKS URL paths.
+    issuer_path = i.path.rstrip("/")
+    keycloak_realm = bool(re.fullmatch(r"/realms/[A-Za-z0-9_-]{1,64}", issuer_path))
+    keycloak_jwks = (
+        issuer_path + "/protocol/openid-connect/certs" if keycloak_realm else ""
+    )
+    allowed_key_path = (
+        j.path.startswith("/.well-known/") and len(j.path) > len("/.well-known/")
+        or bool(keycloak_jwks and j.path == keycloak_jwks)
+    )
     if (not issuer or not audience or not dsn or len(audience) > 250
             or i.scheme != "https" or j.scheme != "https"
             or not i.hostname or i.hostname != j.hostname
             or i.username or i.password or i.query or i.fragment
-            or j.username or j.password or j.fragment or not j.path
-            or not j.path.startswith("/.well-known/")
+            or j.username or j.password or j.query or j.fragment
+            or not allowed_key_path
             or i.port not in (None, 443) or j.port not in (None, 443)):
         raise HTTPException(status_code=503, detail="Identity service unavailable")
     return OIDCSettings(issuer, audience, jwks_url, dsn)
