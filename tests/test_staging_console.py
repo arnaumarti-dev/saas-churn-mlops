@@ -90,6 +90,9 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="overview-profiles"' in html.text
         assert 'id="overview-rate"' in html.text
         assert 'id="run-period"' in html.text
+        assert 'id="run-scenario"' in html.text
+        assert 'value="at_risk"' in html.text
+        assert 'value="loyal"' in html.text
         assert 'id="trend-plot"' in html.text
         assert 'id="trend-delta"' in html.text
         assert 'id="redeem-invite"' in html.text
@@ -112,6 +115,8 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert "window.confirm" in js
         assert "currentId !== tenantId" in js
         assert "renderHistory()" in js
+        assert 'scenarioLabel(result.scenario)' in js
+        assert '"/runs/sample", { scenario }' in js
         assert "runsCache = Array.isArray(result.runs)" in js
         assert "requestId !== runsRequest" in js
         assert "createElement" in js
