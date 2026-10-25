@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import ssl
 import subprocess
@@ -186,12 +187,15 @@ def test_real_private_browser_organization_lifecycle(
         # Test the aggregate dashboard with synthetic, mocked history.
         # This test has NO inference model or real customer records.
         org_a = owner.locator("#org-picker").input_value()
+        now = datetime.now(timezone.utc)
         history_a = {
             "runs": [
                 {"id": str(uuid4()), "total_profiles": 3,
-                 "high_risk_customers": 2, "created_at": "2026-10-25T01:00:00+00:00"},
+                 "high_risk_customers": 2,
+                 "created_at": (now - timedelta(hours=1)).isoformat()},
                 {"id": str(uuid4()), "total_profiles": 3,
-                 "high_risk_customers": 1, "created_at": "2026-10-24T01:00:00+00:00"},
+                 "high_risk_customers": 1,
+                 "created_at": (now - timedelta(days=15)).isoformat()},
             ]
         }
 
@@ -206,6 +210,25 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#overview-highrisk")).to_have_text("3")
         expect(owner.locator("#overview-rate")).to_have_text("50.0%")
         expect(owner.locator("#run-list .member")).to_have_count(2)
+        expect(owner.locator("#trend-plot .risk-bar")).to_have_count(2)
+        expect(owner.locator("#trend-delta")).to_contain_text("Sube 33.3 puntos")
+
+        # Seven-day filter includes only the recent execution, not the
+        # second run from 15 days ago. Thirty days includes both.
+        owner.locator("#run-period").select_option("7")
+        expect(owner.locator("#overview-runs")).to_have_text("1")
+        expect(owner.locator("#overview-profiles")).to_have_text("3")
+        expect(owner.locator("#overview-highrisk")).to_have_text("2")
+        expect(owner.locator("#overview-rate")).to_have_text("66.7%")
+        expect(owner.locator("#run-list .member")).to_have_count(1)
+        expect(owner.locator("#trend-plot .risk-bar")).to_have_count(1)
+        expect(owner.locator("#trend-delta")).to_contain_text("dos ejecuciones")
+
+        owner.locator("#run-period").select_option("30")
+        expect(owner.locator("#overview-runs")).to_have_text("2")
+        expect(owner.locator("#overview-rate")).to_have_text("50.0%")
+        expect(owner.locator("#trend-plot .risk-bar")).to_have_count(2)
+        owner.locator("#run-period").select_option("all")
 
         # Switching companies must reset every KPI, never reuse previous totals.
         owner.locator("#org-name").fill("Segunda empresa ficticia")
@@ -214,6 +237,7 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#overview-runs")).to_have_text("0")
         expect(owner.locator("#overview-profiles")).to_have_text("0")
         expect(owner.locator("#overview-rate")).to_have_text("—")
+        expect(owner.locator("#trend-plot .risk-bar")).to_have_count(0)
         owner.locator("#org-picker").select_option(org_a)
         expect(owner.locator("#overview-rate")).to_have_text("50.0%")
 
