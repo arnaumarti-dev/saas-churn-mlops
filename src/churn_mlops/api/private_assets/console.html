@@ -65,6 +65,15 @@
           </div>
           <p id="overview-state" class="muted small" role="status" aria-live="polite"></p>
         </section>
+        <section id="alias-tools" class="panel" hidden>
+          <h2>Mi nombre de pruebas</h2>
+          <p class="muted small">Pon un alias ficticio para que tus compañeros puedan reconocerte sin ver un UUID completo. Cada empresa puede tener un alias distinto. No uses nombres reales, correos ni datos personales.</p>
+          <form id="save-alias">
+            <label for="alias-input">Alias en esta empresa (2 a 40 caracteres)</label>
+            <input id="alias-input" minlength="2" maxlength="40" required autocomplete="off" placeholder="Ej. Ana Demo">
+            <button type="submit">Guardar mi alias</button>
+          </form>
+        </section>
         <section id="details" class="panel">
           <h2>Equipo</h2>
           <p id="selected-hint" class="muted">Selecciona una empresa para consultar tu acceso.</p>
