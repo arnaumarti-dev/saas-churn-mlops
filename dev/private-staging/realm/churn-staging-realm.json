@@ -1,0 +1,31 @@
+{
+  "realm": "churn-staging",
+  "enabled": true,
+  "displayName": "Churn Lab Local Staging",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "sslRequired": "all",
+  "clients": [
+    {
+      "clientId": "churn-staging-browser",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://app.localhost/saas/v3/auth/callback"
+      ],
+      "webOrigins": [
+        "https://app.localhost"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ]
+}
