@@ -591,3 +591,19 @@ not suitable for real user data**. Read
 [docs/local-keycloak-staging.md](docs/local-keycloak-staging.md)
 before generating local secrets or deciding to trust the local CA.
 Render public demo remains unchanged and SaaS routes remain disabled there.
+
+## v2.2 candidate — Tenant-scoped synthetic churn analysis
+
+The **default-off private staging console** now provides real ML inference
+for three bundled fictional telecom profiles and an organization-specific
+history of **aggregate counts only** (no actual customers or CSVs saved).
+Owners and analysts can run the fixed sample; viewers can read the history,
+and revoked accounts lose access via PostgreSQL RLS. The optional
+`dev/private-staging/Dockerfile` trains the public sample model at build
+time. No other local databases or Keycloak accounts need to be reset.
+
+After merge, local Docker users may update with `git pull --ff-only`
+and `docker compose --env-file .env.staging.local -f
+compose.private-staging.yml up -d --build app` from their repo root.
+See [docs/tenant-synthetic-analysis-staging.md](docs/tenant-synthetic-analysis-staging.md).
+All private SaaS flags remain **off** on the Render demo.
