@@ -105,10 +105,13 @@ def test_synthetic_runs_are_tenant_scoped_and_role_authorized(config, monkeypatc
         # FastAPI model startup without fixture artifacts is expected; only
         # vectorized scoring is deterministic-patched here, NOT the RLS DB.
         monkeypatch.setattr(app.state, "model", object())
-        monkeypatch.setattr(
-            api_main, "predict_many",
-            lambda model, profiles: [(0.8, 1, 0.5), (0.1, 0, 0.5), (0.7, 1, 0.5)],
-        )
+        processed_tenures = []
+
+        def fake_predict_many(model, profiles):
+            processed_tenures.append([profile["tenure"] for profile in profiles])
+            return [(0.8, 1, 0.5), (0.1, 0, 0.5), (0.7, 1, 0.5)]
+
+        monkeypatch.setattr(api_main, "predict_many", fake_predict_many)
         own = owner.post(
             f"{BASE}/organizations", json={"name": "Synthetic A"},
             headers={"Origin": "https://testserver"},
@@ -171,6 +174,9 @@ def test_synthetic_runs_are_tenant_scoped_and_role_authorized(config, monkeypatc
         keys = [run["scenario"] for run in owner.get(
             f"{BASE}/organizations/{tenant_a}/runs").json()["runs"]]
         assert set(keys) == {"baseline", "loyal", "at_risk"}
+        assert [tenures[0] for tenures in processed_tenures] == [2, 48, 1]
+        # The API actually scores different fixed example rows, not merely
+        # relabels identical requests in the aggregate history.
         assert outsider.get(f"{BASE}/organizations/{tenant_b}/runs").json()["runs"] == []
 
         assert owner.delete(
