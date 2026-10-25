@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-import socket
 import ssl
 import subprocess
 import sys
@@ -41,10 +40,10 @@ def staging(tmp_path_factory):
     root = Path(__file__).resolve().parents[1]
     folder = tmp_path_factory.mktemp("private-browser-staging")
     key = Fernet.generate_key().decode("ascii")
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
-    url = f"https://localhost:{port}"
+    # Browser callback validation deliberately requires default HTTPS port 443.
+    # CI enables unprivileged binding in its disposable Linux runner only.
+    port = 443
+    url = "https://localhost"
     cert, private_key = folder / "test-cert.pem", folder / "test-key.pem"
     subprocess.run(
         [
