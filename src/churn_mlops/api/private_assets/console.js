@@ -300,7 +300,7 @@
       if (!currentOrg()) throw new Error("Selecciona una empresa.");
       const alias = $("alias-input").value.trim();
       if (alias.length < 2 || alias.length > 40
-          || /[<>@\\x00-\\x1f\\x7f]/.test(alias)) {
+          || /[<>@\x00-\x1f\x7f]/.test(alias)) {
         throw new Error("Usa un alias ficticio válido de 2 a 40 caracteres.");
       }
       await api("PUT", "/saas/v3/organizations/" + encodeURIComponent(tenantId)
