@@ -66,6 +66,7 @@ def _tenant_connection(principal: Principal, tenant_id: UUID):
     """Open transaction-local RLS context; caller owns lifecycle of conn."""
     psycopg = _database()
     cfg = _login_config()
+    connection = None
     try:
         connection = psycopg.connect(cfg.database_url, connect_timeout=4)
         # psycopg starts an implicit transaction on the next execute.
@@ -77,6 +78,8 @@ def _tenant_connection(principal: Principal, tenant_id: UUID):
         )
         return connection
     except psycopg.Error as exc:
+        if connection is not None:
+            connection.close()
         raise HTTPException(status_code=503, detail="Database unavailable") from exc
 
 
