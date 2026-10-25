@@ -19,3 +19,9 @@ mlruns/
 mlflow.db
 mlflow.db-shm
 mlflow.db-wal
+
+# Disposable local OIDC/PostgreSQL environment (do not commit secrets or CA)
+.env.staging.local
+.env.staging.local.*
+dev/private-staging/local-trust/*.crt
+dev/private-staging/local-trust/*.pem

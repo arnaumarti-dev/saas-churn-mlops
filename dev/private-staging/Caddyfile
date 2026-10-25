@@ -1,0 +1,14 @@
+{
+  auto_https disable_redirects
+  admin off
+}
+
+https://idp.localhost {
+  tls internal
+  reverse_proxy keycloak:8080
+}
+
+https://app.localhost {
+  tls internal
+  reverse_proxy app:8000
+}

@@ -1,0 +1,90 @@
+# LOCAL TESTING ONLY. Do not deploy to Render or expose to the Internet.
+# Invoke with: docker compose --env-file .env.staging.local -f compose.private-staging.yml ...
+services:
+  db:
+    image: postgres:16.15
+    restart: "no"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${LOCAL_DB_ADMIN_PASSWORD:?Set LOCAL_DB_ADMIN_PASSWORD}
+      CHURN_DB_APP_PASSWORD: ${CHURN_DB_APP_PASSWORD:?Set CHURN_DB_APP_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - local_pgdata:/var/lib/postgresql/data
+      - ./dev/private-staging/initdb:/docker-entrypoint-initdb.d:ro
+      - ./db/migrations:/churn-migrations:ro
+    networks: [private_staging]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    restart: "no"
+    command: ["start-dev", "--import-realm", "--hostname=https://idp.localhost", "--proxy-headers=xforwarded"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak_staging
+      KC_DB_USERNAME: churn_keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?Set KEYCLOAK_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "true"
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - ./dev/private-staging/realm:/opt/keycloak/data/import:ro
+    networks: [private_staging]
+
+  app:
+    build:
+      context: .
+      dockerfile: dev/private-staging/Dockerfile
+    restart: "no"
+    environment:
+      CHURN_SAAS_OIDC_ENABLED: "1"
+      CHURN_SAAS_LOGIN_ENABLED: "1"
+      CHURN_SAAS_MANAGEMENT_ENABLED: "1"
+      CHURN_SAAS_OIDC_ISSUER: https://idp.localhost/realms/churn-staging
+      CHURN_SAAS_OIDC_JWKS_URL: https://idp.localhost/realms/churn-staging/protocol/openid-connect/certs
+      CHURN_SAAS_OIDC_AUDIENCE: churn-staging-api
+      CHURN_SAAS_OIDC_CLIENT_ID: churn-staging-browser
+      CHURN_SAAS_AUTHORIZATION_URL: https://idp.localhost/realms/churn-staging/protocol/openid-connect/auth
+      CHURN_SAAS_TOKEN_URL: https://idp.localhost/realms/churn-staging/protocol/openid-connect/token
+      CHURN_SAAS_REDIRECT_URI: https://app.localhost/saas/v3/auth/callback
+      CHURN_SAAS_DATABASE_URL: postgresql://churn_saas_app:${CHURN_DB_APP_PASSWORD:?Set CHURN_DB_APP_PASSWORD}@db:5432/churn_saas_staging
+      CHURN_SAAS_SESSION_FERNET_KEY: ${CHURN_SAAS_SESSION_FERNET_KEY:?Set CHURN_SAAS_SESSION_FERNET_KEY}
+      SSL_CERT_FILE: /run/private-staging-ca/root.crt
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      # Public CA certificate only: NEVER share Caddy's private CA key.
+      - ./dev/private-staging/local-trust:/run/private-staging-ca:ro
+    networks: [private_staging]
+
+  proxy:
+    image: caddy:2.10.2
+    restart: "no"
+    ports:
+      - "127.0.0.1:443:443"
+    volumes:
+      - ./dev/private-staging/Caddyfile:/etc/caddy/Caddyfile:ro
+      - local_caddy_data:/data
+      - local_caddy_config:/config
+    networks:
+      private_staging:
+        aliases:
+          - idp.localhost
+          - app.localhost
+
+volumes:
+  local_pgdata:
+  local_caddy_data:
+  local_caddy_config:
+networks:
+  private_staging:
+    internal: false
