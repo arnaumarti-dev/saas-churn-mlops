@@ -91,6 +91,8 @@
     $("invite-tools").hidden = !owner;
     $("member-list").replaceChildren();
     $("overview-tools").hidden = !org;
+    $("alias-tools").hidden = !org;
+    $("alias-input").value = org?.alias || "";
     $("overview-org-name").textContent = org ? org.name : "";
     renderOverview([]);
     $("analysis-tools").hidden = !org;
@@ -116,14 +118,15 @@
     item.className = "member";
     const name = document.createElement("span");
     name.className = "subject";
-    name.textContent = member.subject;
+    const displayName = member.alias || "Miembro sin alias · #" + member.subject.slice(0, 8);
+    name.textContent = displayName;
     const actions = document.createElement("div");
     actions.className = "member-actions";
     const label = document.createElement("label");
     label.className = "sr-only";
-    label.textContent = "Rol de " + member.subject;
+    label.textContent = "Rol de " + displayName;
     const roles = document.createElement("select");
-    roles.setAttribute("aria-label", "Rol de " + member.subject);
+    roles.setAttribute("aria-label", "Rol de " + displayName);
     for (const value of ["viewer", "analyst", "owner"]) {
       roles.append(option(value, roleLabel(value)));
     }
@@ -147,7 +150,7 @@
     revoke.type = "button";
     revoke.className = "danger";
     revoke.textContent = "Revocar";
-    revoke.setAttribute("aria-label", "Revocar acceso de " + member.subject);
+    revoke.setAttribute("aria-label", "Revocar acceso de " + displayName);
     revoke.addEventListener("click", async () => {
       if (!window.confirm("¿Revocar el acceso de este miembro? Esta acción es inmediata.")) return;
       revoke.disabled = true;
@@ -289,6 +292,23 @@
       if (button) button.disabled = false;
     }
   }
+
+  $("save-alias").addEventListener("submit", (event) => {
+    event.preventDefault();
+    submit(event.currentTarget, async () => {
+      const tenantId = currentId;
+      if (!currentOrg()) throw new Error("Selecciona una empresa.");
+      const alias = $("alias-input").value.trim();
+      if (alias.length < 2 || alias.length > 40
+          || /[<>@\\x00-\\x1f\\x7f]/.test(alias)) {
+        throw new Error("Usa un alias ficticio válido de 2 a 40 caracteres.");
+      }
+      await api("PUT", "/saas/v3/organizations/" + encodeURIComponent(tenantId)
+        + "/me/alias", { alias });
+      await reload(currentId);
+      message("Alias actualizado para tu empresa de pruebas.");
+    });
+  });
 
   $("create-org").addEventListener("submit", (event) => {
     event.preventDefault();
