@@ -257,13 +257,13 @@ def _my_orgs(principal: Principal) -> list[dict[str, str]]:
                     (principal.issuer, principal.subject),
                 )
                 memberships = conn.execute(
-                    """SELECT tenant_id, role FROM saas.memberships
+                    """SELECT tenant_id, role, display_alias FROM saas.memberships
                        WHERE oidc_issuer = %s AND oidc_subject = %s
                          AND revoked_at IS NULL ORDER BY tenant_id LIMIT 50""",
                     (principal.issuer, principal.subject),
                 ).fetchall()
                 result = []
-                for tenant_id, role in memberships:
+                for tenant_id, role, display_alias in memberships:
                     conn.execute(
                         "SELECT set_config('app.tenant_id', %s, true)",
                         (str(tenant_id),),
@@ -274,7 +274,8 @@ def _my_orgs(principal: Principal) -> list[dict[str, str]]:
                     ).fetchone()
                     if name is not None:
                         result.append({
-                            "tenant_id": str(tenant_id), "name": name[0], "role": role
+                            "tenant_id": str(tenant_id), "name": name[0], "role": role,
+                            "alias": display_alias
                         })
                 return result
     except psycopg.Error as exc:
