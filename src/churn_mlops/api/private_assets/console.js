@@ -120,9 +120,12 @@
     $("analysis-tools").hidden = !org;
     $("analysis-result").replaceChildren();
     $("analysis-result").hidden = true;
+    $("comparison-results").replaceChildren();
+    $("comparison-results").hidden = true;
     $("run-scenario").value = "baseline";
     $("scenario-explanation").textContent = scenarioHelp("baseline");
     $("run-sample").disabled = !org || !["owner", "analyst"].includes(org.role);
+    $("compare-scenarios").disabled = $("run-sample").disabled;
     $("run-permission-hint").textContent = !org ? "" : org.role === "viewer"
       ? "Tu rol de lector permite consultar el historial, pero no ejecutar análisis."
       : "Los análisis usan el modelo de IA y tres perfiles ficticios preparados.";
@@ -347,12 +350,80 @@
     (e) => message(e.message, true)
   ));
 
+  function renderComparison(results) {
+    const expected = ["baseline", "at_risk", "loyal"];
+    if (!Array.isArray(results) || results.length !== 3 ||
+        !expected.every((key) => results.some((r) => r.scenario === key))) {
+      throw new Error("La comparación no ha devuelto los tres escenarios.");
+    }
+    const area = $("comparison-results");
+    const cards = [];
+    for (const key of expected) {
+      const run = results.find((r) => r.scenario === key);
+      const total = Number(run.total_profiles);
+      const high = Number(run.high_risk_customers);
+      const average = Number(run.average_churn_probability);
+      if (!Number.isInteger(total) || total < 1 || total > 200 ||
+          !Number.isInteger(high) || high < 0 || high > total ||
+          !Number.isFinite(average) || average < 0 || average > 1) {
+        throw new Error("Resultados de comparación no válidos.");
+      }
+      const card = document.createElement("div");
+      card.className = "comparison-card";
+      const title = document.createElement("h4");
+      title.textContent = scenarioLabel(key);
+      const percentage = document.createElement("strong");
+      percentage.className = "comparison-rate";
+      percentage.textContent = (high * 100 / total).toFixed(1) + "%";
+      const counts = document.createElement("p");
+      counts.textContent = high + " de " + total + " perfiles ficticios en riesgo alto.";
+      const confidence = document.createElement("p");
+      confidence.className = "muted small";
+      confidence.textContent = "Probabilidad media del modelo: " +
+        (average * 100).toFixed(1) + "%";
+      card.append(title, percentage, counts, confidence);
+      cards.push(card);
+    }
+    area.replaceChildren(...cards);
+    area.hidden = false;
+  }
+
+  $("compare-scenarios").addEventListener("click", async () => {
+    const org = currentOrg();
+    if (!org || !["owner", "analyst"].includes(org.role)) return;
+    const tenantId = org.tenant_id;
+    $("compare-scenarios").disabled = true;
+    $("run-sample").disabled = true;
+    $("run-scenario").disabled = true;
+    try {
+      const response = await api(
+        "POST", "/saas/v3/organizations/" + encodeURIComponent(tenantId) +
+        "/runs/compare", {}
+      );
+      if (currentId !== tenantId) return;
+      renderComparison(response.results);
+      await loadRuns();
+      if (currentId === tenantId) {
+        message("Tres escenarios ficticios comparados y guardados en el historial.");
+      }
+    } catch (error) {
+      if (currentId === tenantId) message(error.message, true);
+    } finally {
+      const canAnalyze = currentOrg() &&
+        ["owner", "analyst"].includes(currentOrg().role);
+      $("compare-scenarios").disabled = !canAnalyze;
+      $("run-sample").disabled = !canAnalyze;
+      $("run-scenario").disabled = false;
+    }
+  });
+
   $("run-sample").addEventListener("click", async () => {
     const org = currentOrg();
     if (!org || !["owner", "analyst"].includes(org.role)) return;
     const tenantId = org.tenant_id;
     const scenario = $("run-scenario").value;
     $("run-sample").disabled = true;
+    $("compare-scenarios").disabled = true;
     $("run-scenario").disabled = true;
     try {
       const result = await api(
@@ -376,6 +447,7 @@
       $("run-scenario").disabled = false;
       $("run-sample").disabled = !currentOrg() ||
         !["owner", "analyst"].includes(currentOrg().role);
+      $("compare-scenarios").disabled = $("run-sample").disabled;
     }
   });
 
