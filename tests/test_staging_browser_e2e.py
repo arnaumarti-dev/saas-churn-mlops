@@ -270,6 +270,37 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#analysis-result")).to_contain_text("Riesgo potencial")
         assert submitted == [{"scenario": "loyal"}, {"scenario": "at_risk"}]
 
+        # A single comparison only sends {}, and renders server-owned aggregate
+        # results. No client rows, arbitrary scenarios or external charts.
+        comparison_requests = []
+
+        def fake_compare(route):
+            comparison_requests.append(route.request.post_data_json)
+            route.fulfill(status=201, json={
+                "synthetic_only": True,
+                "results": [
+                    {"scenario": "baseline", "total_profiles": 3,
+                     "high_risk_customers": 2,
+                     "average_churn_probability": 0.5},
+                    {"scenario": "at_risk", "total_profiles": 3,
+                     "high_risk_customers": 3,
+                     "average_churn_probability": 0.9},
+                    {"scenario": "loyal", "total_profiles": 3,
+                     "high_risk_customers": 0,
+                     "average_churn_probability": 0.1},
+                ],
+            })
+
+        owner.route("**/saas/v3/organizations/*/runs/compare", fake_compare)
+        owner.locator("#compare-scenarios").click()
+        expect(owner.locator("#comparison-results .comparison-card")).to_have_count(3)
+        expect(owner.locator("#comparison-results")).to_contain_text("Mixto")
+        expect(owner.locator("#comparison-results")).to_contain_text("Riesgo potencial")
+        expect(owner.locator("#comparison-results")).to_contain_text("Fidelización")
+        expect(owner.locator("#comparison-results")).to_contain_text("100.0%")
+        expect(owner.locator("#comparison-results")).to_contain_text("0.0%")
+        assert comparison_requests == [{}]
+
         # Switching companies must reset every KPI, never reuse previous totals.
         owner.locator("#org-name").fill("Segunda empresa ficticia")
         owner.locator('#create-org button[type="submit"]').click()
@@ -278,6 +309,7 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#overview-profiles")).to_have_text("0")
         expect(owner.locator("#overview-rate")).to_have_text("—")
         expect(owner.locator("#trend-plot .risk-bar")).to_have_count(0)
+        expect(owner.locator("#comparison-results")).to_be_hidden()
         owner.locator("#org-picker").select_option(org_a)
         expect(owner.locator("#overview-rate")).to_have_text("50.0%")
 
@@ -315,6 +347,7 @@ def test_real_private_browser_organization_lifecycle(
         expect(member.locator("#owner-tools")).to_be_hidden()
         expect(member.locator("#invite-tools")).to_be_hidden()
         expect(member.locator("#alias-tools")).to_be_visible()
+        expect(member.locator("#compare-scenarios")).to_be_disabled()
         member.locator("#alias-input").fill("Luis Demo")
         member.locator('#save-alias button[type="submit"]').click()
         expect(member.locator("#feedback")).to_have_text(
