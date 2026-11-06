@@ -50,3 +50,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .scenario-picker label{font-weight:700;font-size:.87rem}
 .scenario-picker select{width:100%;margin:.1rem 0;padding:.65rem;border:1px solid #4d5a70;background:#0e1725;color:var(--ink);border-radius:8px}
 .scenario-picker p{margin:.15rem 0 .4rem}
+
+/* v2.6: three simulated scenario outcomes rendered with no customer records. */
+.comparison-area{border-top:1px solid var(--border);margin:1.35rem 0 1.1rem;padding-top:1.1rem}
+.comparison-area>h3{margin:0 0 .3rem!important}
+.comparison-area>p{margin:.3rem 0 .8rem}
+.comparison-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin:1rem 0}
+.comparison-card{min-width:0;border:1px solid #3b5e85;border-radius:12px;background:#0d1e32;padding:.8rem}
+.comparison-card h4{font-size:.83rem;margin:0 0 .5rem;color:#b6ddff}
+.comparison-rate{font-size:1.5rem;font-variant-numeric:tabular-nums}
+.comparison-card p{font-size:.81rem;margin:.3rem 0}
+@media(max-width:950px){.comparison-grid{grid-template-columns:1fr}}
