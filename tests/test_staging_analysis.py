@@ -299,7 +299,9 @@ def test_atomic_three_scenario_comparison_is_tenant_scoped(config, monkeypatch):
             "scenario", "total_profiles", "high_risk_customers",
             "average_churn_probability",
         }
-        assert "customers" not in str(comparison)
+        assert set(comparison) == {"tenant_id", "synthetic_only", "results"}
+        assert all("customers" not in item and "predictions" not in item
+                   for item in comparison["results"])
 
         history = owner.get(f"{BASE}/organizations/{tenant}/runs")
         assert history.status_code == 200
