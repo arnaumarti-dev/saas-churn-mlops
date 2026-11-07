@@ -709,7 +709,7 @@
 
   function renderDemoEvaluation(report) {
     demoResults = report;
-    $("demo-kpi-accounts").textContent = report.accounts.toLocaleString("es-ES");
+    $("demo-kpi-accounts").textContent = report.accounts.toLocaleString("es-ES", { useGrouping: "always" });
     $("demo-kpi-auc").textContent = demoDecimal(report.model.roc_auc);
     $("demo-kpi-recall").textContent = demoPct(report.model.recall);
     $("demo-kpi-flags").textContent = String(report.quality.distribution_flag_count);
