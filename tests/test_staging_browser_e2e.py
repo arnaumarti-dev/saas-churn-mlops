@@ -208,6 +208,12 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator(".offline-pilot-panel")).to_contain_text(
             "evaluate_saas_pilot.py"
         )
+        expect(owner.locator("#quality-panel-title")).to_contain_text(
+            "Comprobar calidad de datos y sensibilidad del modelo"
+        )
+        expect(owner.locator(".quality-panel")).to_contain_text(
+            "--format text"
+        )
         expect(owner.locator('input[type="file"]')).to_have_count(0)
         expect(owner.locator("#run-scenario")).to_have_value("baseline")
         expect(owner.locator("#run-scenario option")).to_have_count(3)
