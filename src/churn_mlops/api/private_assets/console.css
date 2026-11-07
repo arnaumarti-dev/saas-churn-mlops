@@ -90,3 +90,51 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .quality-panel{border-top:1px solid #45698e;margin-top:1.1rem;padding-top:1rem}
 .quality-panel h3{font-size:1rem;margin:.3rem 0 .6rem}
 .quality-panel p{margin:.45rem 0 .75rem}
+
+/* v3.2: authenticated, aggregate-only fictional experiment visualization. */
+.demo-eval{border-color:#4574a3;background:linear-gradient(150deg,#182943,#141d2c 45%)}
+.demo-eval [hidden]{display:none!important}
+.demo-eval-header{display:flex;justify-content:space-between;align-items:center;gap:.8rem;flex-wrap:wrap}
+.demo-eval-header h2{margin:0 0 .45rem;font-size:1.25rem}
+.demo-eval-chip{display:inline-flex;flex-shrink:0;padding:.3rem .7rem;border-radius:999px;border:1px solid #47977b;color:#b4f1d2;background:#173b31;font-size:.75rem;font-weight:750}
+.demo-eval-loading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem}
+.demo-eval-loading p{margin:.45rem 0}
+.demo-eval-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin:1rem 0 1.3rem}
+.demo-eval-kpi{min-width:0;padding:.9rem;background:#0c1b2c;border:1px solid #405979;border-radius:11px;display:grid;gap:.25rem}
+.demo-eval-kpi span{font-size:.78rem;color:#afc1d8}
+.demo-eval-kpi strong{font-size:clamp(1.4rem,3vw,1.9rem);font-variant-numeric:tabular-nums;line-height:1.3}
+.demo-eval-tabs{display:flex;gap:.35rem;flex-wrap:wrap;border-bottom:1px solid #42607e;padding-bottom:.65rem;margin-bottom:1rem}
+.demo-eval-tabs button{background:transparent;color:#c6d5e9;border:1px solid transparent;border-radius:8px;padding:.55rem .7rem;font-size:.83rem}
+.demo-eval-tabs button[aria-selected="true"]{background:#265084;color:#fff;border-color:#68a6f5}
+.demo-eval [role="tabpanel"] h3{margin:.25rem 0 .55rem}
+.demo-eval-metrics{display:flex;gap:.5rem;margin:.9rem 0;flex-wrap:wrap}
+.demo-eval-metrics button{padding:.45rem .8rem;font-size:.82rem;border-color:#4d6180}
+.demo-eval-metrics button[aria-pressed="true"]{border-color:#75baff;background:#264c78}
+.demo-eval-chart{background:#0d1928;border:1px solid #354d69;border-radius:12px;padding:1rem;margin:.8rem 0}
+.demo-eval-bar-row{display:grid;grid-template-columns:minmax(105px,150px) minmax(0,1fr) 46px;gap:.55rem;align-items:center;margin:.75rem 0;font-size:.78rem}
+.demo-eval-bar-row strong{font-variant-numeric:tabular-nums;text-align:right}
+.demo-eval-track{height:17px;border-radius:6px;background:#263346;overflow:hidden}
+.demo-eval-bar{height:100%;width:0;border-radius:6px;transition:width 180ms ease}
+.demo-eval-bar.model{background:#69b7ff}
+.demo-eval-bar.baseline{background:#8ca2ba}
+.demo-eval-axis{display:flex;justify-content:space-between;margin-left:calc(150px + .55rem);margin-right:46px;color:#a6b8d1;font-size:.72rem}
+.demo-eval-table-wrap{overflow-x:auto;max-width:100%}
+.demo-eval-table{width:100%;border-collapse:collapse;font-size:.8rem;margin:.75rem 0}
+.demo-eval-table caption{color:#b6c5dd;text-align:left;padding:.4rem 0}
+.demo-eval-table th,.demo-eval-table td{padding:.6rem .35rem;border-bottom:1px solid #34465e;text-align:right;font-variant-numeric:tabular-nums}
+.demo-eval-table th:first-child,.demo-eval-table td:first-child{text-align:left;overflow-wrap:anywhere}
+.demo-eval-stress-grid{display:grid;gap:.65rem;margin:1rem 0}
+.demo-eval-stress-card{background:#0e1c2d;border:1px solid #345373;padding:.85rem;border-radius:10px;display:grid;gap:.35rem}
+.demo-eval-stress-card strong{font-size:.87rem}
+.demo-eval-stress-card p{font-size:.8rem;margin:0;color:#becce0}
+.demo-eval-footnote{border-top:1px solid #3a4d69;padding-top:.75rem;margin:.9rem 0 0}
+@media(max-width:650px){
+  .demo-eval-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+  .demo-eval-kpi{padding:.65rem}
+  .demo-eval-bar-row{grid-template-columns:minmax(0,1fr) 46px}
+  .demo-eval-bar-row>span{grid-column:1/-1}
+  .demo-eval-axis{margin-left:0;margin-right:46px}
+  .demo-eval-table{font-size:.73rem}
+  .demo-eval-table th,.demo-eval-table td{padding:.45rem .2rem}
+}
+@media(prefers-reduced-motion:reduce){.demo-eval-bar{transition:none}}
