@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V2.9</p>
+      <p class="eyebrow">CHURN LAB · V3.0</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -179,6 +179,15 @@
               </div>
               <p class="muted small"><strong>Solo datos generados.</strong> La comparación no demuestra estabilidad temporal en producción, eficacia comercial, ahorro económico ni cumplimiento de privacidad con datos reales.</p>
               <p class="muted small">Para ver los resultados, ejecuta el mismo comando offline anterior y consulta <code>held_out_test_diagnostics</code>. Guía: <code>docs/saas-holdout-diagnostics-v29.md</code>.</p>
+            </section>
+            <section class="offline-pilot-panel" aria-labelledby="offline-pilot-title">
+              <p class="eyebrow">PIPELINE DE EVALUACIÓN LOCAL · V3.0</p>
+              <h3 id="offline-pilot-title">Evaluar un dataset histórico SaaS sin subirlo a la plataforma</h3>
+              <p class="muted small">Ahora puedes ejecutar un modelo exploratorio con el contrato de ocho columnas. Valida la calidad y madurez de las etiquetas, separa entrenamiento, validación y prueba por fecha, comprueba una separación de 30 días entre particiones y compara el resultado frente a una línea base.</p>
+              <p class="muted small"><strong>Primero prueba con las 1.200 cuentas ficticias:</strong></p>
+              <code class="pilot-command">$env:PYTHONPATH="src"; python scripts/evaluate_saas_pilot.py --demo --as-of 2026-03-01</code>
+              <p class="muted small"><strong>El CSV local solo debe utilizarse con autorización y controles adecuados.</strong> No escribas información personal, no subas CSV a GitHub/Render ni compartas el archivo en el chat. El comprobador no verifica la legalidad, la procedencia ni la calidad real de los datos.</p>
+              <p class="muted small">Documentación de la evaluación offline: <code>docs/saas-offline-pilot-v30.md</code>. No se publica ningún predictor SaaS ni se guardan modelos o predicciones individuales.</p>
             </section>
           </div>
         </section>
