@@ -6,7 +6,7 @@ properly pseudonymized offline CSVs; never with unapproved personal data.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from math import isfinite
 import re
 from typing import Iterable, Mapping
@@ -39,7 +39,7 @@ def _safe_date(value: object, column: str, row_number: int) -> date:
 
 
 def _whole(value: object, column: str, row: int, lowest: int, highest: int) -> int:
-    if not isinstance(value, str) or not re.fullmatch(r"\d+", value):
+    if not isinstance(value, str) or len(value) > 12 or not re.fullmatch(r"\d+", value):
         raise DataContractError(f"Fila {row}: {column} debe ser un entero")
     number = int(value)
     if not lowest <= number <= highest:
@@ -94,7 +94,7 @@ def check_pilot_readiness(
         _whole(raw["active_days_30d"], "active_days_30d", number, 0, 30)
         _whole(raw["support_tickets_30d"], "support_tickets_30d", number, 0, 10_000)
         label = _whole(raw["churn_next_30d"], "churn_next_30d", number, 0, 1)
-        if snapshot + timedelta(days=HORIZON_DAYS) > as_of:
+        if (as_of - snapshot).days < HORIZON_DAYS:
             immature += 1
         cleaned.append((snapshot, label))
 
