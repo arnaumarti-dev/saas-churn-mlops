@@ -9,6 +9,7 @@ import time
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 psycopg = pytest.importorskip("psycopg")
@@ -69,12 +70,21 @@ def sample(client, tenant, payload=None):
     )
 
 
+def compare(client, tenant, payload=None):
+    return client.post(
+        f"{BASE}/organizations/{tenant}/runs/compare",
+        json={} if payload is None else payload,
+        headers={"Origin": "https://testserver"},
+    )
+
+
 def test_public_demo_cannot_access_sample_routes(monkeypatch):
     monkeypatch.delenv("CHURN_SAAS_MANAGEMENT_ENABLED", raising=False)
     tenant = uuid4()
     with TestClient(app, base_url="https://testserver") as guest:
         assert guest.get(f"{BASE}/organizations/{tenant}/runs").status_code == 404
         assert sample(guest, tenant).status_code == 404
+        assert compare(guest, tenant).status_code == 404
 
 
 def test_valid_session_and_same_origin_required(config):
@@ -82,6 +92,7 @@ def test_valid_session_and_same_origin_required(config):
     with TestClient(app, base_url="https://testserver") as guest:
         assert guest.get(f"{BASE}/organizations/{tenant}/runs").status_code == 401
         assert sample(guest, tenant).status_code == 401
+        assert compare(guest, tenant).status_code == 401
     with browser("staging-actor-" + str(uuid4())) as actor:
         assert actor.post(
             f"{BASE}/organizations/{tenant}/runs/sample", json={}
@@ -93,6 +104,11 @@ def test_valid_session_and_same_origin_required(config):
         assert sample(actor, tenant, {"customers": []}).status_code == 422
         assert sample(actor, tenant, {"scenario": "invented"}).status_code == 422
         assert sample(actor, tenant, {"scenario": "loyal", "customers": []}).status_code == 422
+        assert compare(actor, tenant, {"customers": []}).status_code == 422
+        assert compare(actor, tenant, {"scenario": "loyal"}).status_code == 422
+        assert actor.post(
+            f"{BASE}/organizations/{tenant}/runs/compare", json={}
+        ).status_code == 403
 
 
 @pytest.mark.skipif(not os.getenv("CHURN_TEST_DB_ADMIN_URL"), reason="Ephemeral PostgreSQL required")
@@ -222,3 +238,113 @@ def test_server_curated_scenarios_are_distinct_and_have_no_client_fields():
     assert all(customer.MonthlyCharges >= 0 and customer.TotalCharges >= 0
                for scenario in scenarios.values() for customer in scenario.customers)
     assert analysis.EmptySyntheticRun().scenario == "baseline"
+
+
+@pytest.mark.skipif(not os.getenv("CHURN_TEST_DB_ADMIN_URL"), reason="Ephemeral PostgreSQL required")
+def test_atomic_three_scenario_comparison_is_tenant_scoped(config, monkeypatch):
+    owner_subject = "compare-owner-" + str(uuid4())
+    outsider_subject = "compare-outsider-" + str(uuid4())
+    viewer_subject = "compare-viewer-" + str(uuid4())
+    seen_tenures = []
+
+    def fake_predict_many(model, profiles):
+        tenure = profiles[0]["tenure"]
+        seen_tenures.append(tenure)
+        values = {
+            2: (0.8, 0.1, 0.7),
+            1: (0.95, 0.9, 0.8),
+            48: (0.15, 0.1, 0.05),
+        }[tenure]
+        return [(prob, int(prob >= 0.5), 0.5) for prob in values]
+
+    with (browser(owner_subject) as owner,
+          browser(outsider_subject) as outsider,
+          browser(viewer_subject) as viewer):
+        monkeypatch.setattr(app.state, "model", object())
+        monkeypatch.setattr(api_main, "predict_many", fake_predict_many)
+        organization = owner.post(
+            f"{BASE}/organizations", json={"name": "Compare Synthetic A"},
+            headers={"Origin": "https://testserver"},
+        )
+        other_org = outsider.post(
+            f"{BASE}/organizations", json={"name": "Compare Synthetic B"},
+            headers={"Origin": "https://testserver"},
+        )
+        assert organization.status_code == 201
+        assert other_org.status_code == 201
+        tenant = organization.json()["tenant_id"]
+        foreign_tenant = other_org.json()["tenant_id"]
+
+        assert compare(outsider, tenant).status_code == 403
+        assert compare(owner, foreign_tenant).status_code == 403
+        assert compare(viewer, tenant).status_code == 403
+        assert compare(owner, tenant, {"customers": []}).status_code == 422
+        assert compare(owner, tenant, {"scenario": "loyal"}).status_code == 422
+        assert owner.post(
+            f"{BASE}/organizations/{tenant}/runs/compare", json={}
+        ).status_code == 403
+        assert owner.get(f"{BASE}/organizations/{tenant}/runs").json()["runs"] == []
+
+        response = compare(owner, tenant)
+        assert response.status_code == 201, response.text
+        comparison = response.json()
+        assert comparison["synthetic_only"] is True
+        assert comparison["tenant_id"] == tenant
+        assert [item["scenario"] for item in comparison["results"]] == [
+            "baseline", "at_risk", "loyal"]
+        assert [item["high_risk_customers"] for item in comparison["results"]] == [2, 3, 0]
+        assert [item["total_profiles"] for item in comparison["results"]] == [3, 3, 3]
+        assert seen_tenures == [2, 1, 48]
+        assert set(comparison["results"][0]) == {
+            "scenario", "total_profiles", "high_risk_customers",
+            "average_churn_probability",
+        }
+        assert set(comparison) == {"tenant_id", "synthetic_only", "results"}
+        assert all("customers" not in item and "predictions" not in item
+                   for item in comparison["results"])
+
+        history = owner.get(f"{BASE}/organizations/{tenant}/runs")
+        assert history.status_code == 200
+        assert len(history.json()["runs"]) == 3
+        assert {run["scenario"] for run in history.json()["runs"]} == {
+            "baseline", "at_risk", "loyal"}
+        assert outsider.get(f"{BASE}/organizations/{tenant}/runs").status_code == 403
+        assert outsider.get(f"{BASE}/organizations/{foreign_tenant}/runs").json()["runs"] == []
+
+        invite = owner.post(
+            f"{BASE}/organizations/{tenant}/invitations",
+            json={"role": "viewer"}, headers={"Origin": "https://testserver"},
+        )
+        assert invite.status_code == 201
+        assert viewer.post(
+            f"{BASE}/invitations/accept", json={"code": invite.json()["code"]},
+            headers={"Origin": "https://testserver"},
+        ).status_code == 200
+        assert len(viewer.get(f"{BASE}/organizations/{tenant}/runs").json()["runs"]) == 3
+        assert compare(viewer, tenant).status_code == 403
+        assert owner.patch(
+            f"{BASE}/organizations/{tenant}/members/{viewer_subject}",
+            json={"role": "analyst"}, headers={"Origin": "https://testserver"},
+        ).status_code == 200
+        assert compare(viewer, tenant).status_code == 201
+        assert len(owner.get(f"{BASE}/organizations/{tenant}/runs").json()["runs"]) == 6
+
+        # Failing on the second scenario MUST roll back the earlier INSERT.
+        def fail_after_first(model, profiles):
+            if profiles[0]["tenure"] == 1:
+                raise HTTPException(status_code=503, detail="Model unavailable")
+            return fake_predict_many(model, profiles)
+
+        monkeypatch.setattr(api_main, "predict_many", fail_after_first)
+        failed = compare(owner, tenant)
+        assert failed.status_code == 503
+        assert len(owner.get(f"{BASE}/organizations/{tenant}/runs").json()["runs"]) == 6
+
+        with psycopg.connect(os.environ["CHURN_TEST_DB_ADMIN_URL"]) as db:
+            count, total, high = db.execute(
+                "SELECT count(*), sum(total_profiles), sum(over_threshold) "
+                "FROM saas.sandbox_runs WHERE tenant_id = %s", (tenant,),
+            ).fetchone()
+            assert (count, total, high) == (6, 18, 10)
+        with psycopg.connect(os.environ["CHURN_TEST_DB_APP_URL"]) as db:
+            assert db.execute("SELECT count(*) FROM saas.sandbox_runs").fetchone()[0] == 0

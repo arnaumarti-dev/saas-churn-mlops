@@ -192,3 +192,57 @@ def score_synthetic_sample(
         "synthetic_only": True, "scenario": payload.scenario,
         "summary": summary.model_dump(),
     }
+
+
+class EmptySyntheticComparison(BaseModel):
+    """Explicit opt-in: score and record every fixed fictional scenario."""
+    model_config = ConfigDict(extra="forbid")
+
+
+@router.post("/organizations/{tenant_id}/runs/compare", status_code=201)
+def compare_synthetic_scenarios(
+    tenant_id: UUID,
+    payload: EmptySyntheticComparison,
+    request: Request,
+    principal: Principal = Depends(_v18_principal),
+):
+    """Score three server-owned examples groups and commit their aggregates atomically.
+
+    The client cannot supply profiles or choose arbitrary combinations. A failed
+    prediction rolls the whole transaction back, never leaving partial history.
+    """
+    _check_origin(request)
+    from churn_mlops.api.main import _score_batch
+
+    psycopg = _database()
+    results = []
+    try:
+        with _tenant_connection(principal, tenant_id) as conn:
+            role = _active_role(conn, principal, tenant_id)
+            if role not in ("owner", "analyst"):
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+            for scenario in ("baseline", "at_risk", "loyal"):
+                summary: BatchSummary = _score_batch(
+                    SYNTHETIC_SCENARIOS[scenario]
+                ).summary
+                run_id = uuid4()
+                conn.execute(
+                    """INSERT INTO saas.sandbox_runs
+                       (id, tenant_id, created_by_subject, total_profiles,
+                        over_threshold, scenario_key)
+                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                    (run_id, tenant_id, principal.subject,
+                     summary.total_customers, summary.high_risk_customers,
+                     scenario),
+                )
+                results.append({
+                    "scenario": scenario,
+                    "total_profiles": summary.total_customers,
+                    "high_risk_customers": summary.high_risk_customers,
+                    "average_churn_probability": summary.average_churn_probability,
+                })
+    except psycopg.Error as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
+
+    return {"tenant_id": str(tenant_id), "synthetic_only": True,
+            "results": results}
