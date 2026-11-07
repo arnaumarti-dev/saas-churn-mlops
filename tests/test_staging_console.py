@@ -18,7 +18,7 @@ from churn_mlops.api import staging_login as login
 
 
 BASE = "/saas/v3"
-STAGING_PAGES = ["/console", "/console.js", "/console.css", "/organizations/list"]
+STAGING_PAGES = ["/console", "/console.js", "/console.css", "/demo-evaluation", "/organizations/list"]
 
 
 @pytest.fixture
@@ -93,7 +93,15 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="run-scenario"' in html.text
         assert 'id="compare-scenarios"' in html.text
         assert 'id="comparison-results"' in html.text
-        assert 'CHURN LAB · V3.1' in html.text
+        assert 'CHURN LAB · V3.2' in html.text
+        assert 'id="demo-evaluation-panel"' in html.text
+        assert 'id="demo-tab-quality"' in html.text
+        assert 'id="demo-tab-robustness"' in html.text
+        assert 'id="demo-comparison-chart"' in html.text
+        assert 'id="demo-quality-rows"' in html.text
+        assert 'id="demo-stress-cards"' in html.text
+        assert "Datos 100 % ficticios" in html.text
+        assert "No pertenece a la empresa seleccionada" in html.text
         assert 'id="quality-panel-title"' in html.text
         assert "docs/saas-data-quality-v31.md" in html.text
         assert "--format text" in html.text
@@ -120,6 +128,30 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="alias-input"' in html.text
         assert 'id="save-alias"' in html.text
         assert "console-" not in html.text  # never embed OIDC subjects
+        # The generated sample is authenticated and only aggregates are returned.
+        synthetic = client.get(BASE + "/demo-evaluation")
+        assert synthetic.status_code == 200
+        assert synthetic.headers["cache-control"] == "no-store"
+        payload = synthetic.json()
+        assert payload["demo_only"] is True
+        assert payload["not_real_customer_data"] is True
+        assert payload["not_validated_for_production"] is True
+        assert payload["accounts"] == 1200
+        assert payload["splits"] == {
+            "training": 700, "validation": 200, "test": 300
+        }
+        assert payload["model"]["roc_auc"] == 0.808239
+        assert payload["baseline"]["roc_auc"] == 0.5
+        assert payload["quality"]["distribution_flag_count"] == 0
+        assert len(payload["quality"]["features"]) == 5
+        assert payload["robustness"]["evaluated_split"] == "validation_only"
+        assert len(payload["robustness"]["scenarios"]) == 3
+        import json
+        serialized = json.dumps(payload)
+        assert "synthetic_0000001" not in serialized
+        assert "account_id" not in serialized
+        assert "customer_predictions" not in serialized
+        assert "trained_model_path" not in serialized
         assert "noindex" in html.text
         assert "<script defer src=" in html.text
         for asset, kind in (("console.js", "javascript"), ("console.css", "css")):

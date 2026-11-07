@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V3.1</p>
+      <p class="eyebrow">CHURN LAB · V3.2</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -146,6 +146,74 @@
           <h3>Historial por empresa</h3>
           <p class="muted small">Cada ejecución guarda su escenario ficticio, fecha y recuentos agregados. Comparar escenarios no demuestra cambios reales del churn.</p>
           <div id="run-list" class="members" aria-live="polite"></div>
+        </section>
+        <section id="demo-evaluation-panel" class="panel demo-eval" aria-labelledby="demo-eval-heading">
+          <div class="demo-eval-header">
+            <div>
+              <p class="eyebrow">VISUALIZACIÓN EXPERIMENTAL · V3.2</p>
+              <h2 id="demo-eval-heading">Evaluación del modelo SaaS</h2>
+            </div>
+            <span class="demo-eval-chip">Datos 100 % ficticios</span>
+          </div>
+          <p class="muted small">Referencia reproducible con 1.200 cuentas inventadas (semilla 28). <strong>No pertenece a la empresa seleccionada</strong> ni utiliza su historial. La evaluación se calcula localmente en este staging; no se suben CSV ni se generan predicciones de clientes.</p>
+          <div class="demo-eval-loading">
+            <p id="demo-eval-status" role="status" aria-live="polite">Calculando resultados ficticios…</p>
+            <button id="demo-eval-retry" type="button" class="secondary" hidden>Reintentar carga</button>
+          </div>
+          <div id="demo-eval-content" hidden>
+            <div class="demo-eval-kpis" aria-label="Indicadores del experimento ficticio">
+              <div class="demo-eval-kpi"><span>Cuentas inventadas</span><strong id="demo-kpi-accounts">—</strong></div>
+              <div class="demo-eval-kpi"><span>ROC-AUC en prueba</span><strong id="demo-kpi-auc">—</strong></div>
+              <div class="demo-eval-kpi"><span>Recall en prueba</span><strong id="demo-kpi-recall">—</strong></div>
+              <div class="demo-eval-kpi"><span>Avisos de distribución</span><strong id="demo-kpi-flags">—</strong></div>
+            </div>
+            <div class="demo-eval-tabs" role="tablist" aria-label="Resultados del experimento ficticio">
+              <button type="button" role="tab" id="demo-tab-performance" aria-controls="demo-panel-performance" aria-selected="true" tabindex="0" data-demo-tab="performance">Rendimiento</button>
+              <button type="button" role="tab" id="demo-tab-quality" aria-controls="demo-panel-quality" aria-selected="false" tabindex="-1" data-demo-tab="quality">Calidad de datos</button>
+              <button type="button" role="tab" id="demo-tab-robustness" aria-controls="demo-panel-robustness" aria-selected="false" tabindex="-1" data-demo-tab="robustness">Robustez</button>
+            </div>
+            <section id="demo-panel-performance" role="tabpanel" aria-labelledby="demo-tab-performance" tabindex="0">
+              <h3>Modelo frente a línea base</h3>
+              <p class="muted small">Comparativa sobre el mismo conjunto de prueba: 300 cuentas ficticias. Los valores más altos indican mejor discriminación en este experimento, no eficacia comercial.</p>
+              <div class="demo-eval-metrics" role="group" aria-label="Métrica de comparación">
+                <button type="button" id="demo-metric-roc" class="secondary" aria-pressed="true" data-demo-metric="roc_auc">ROC-AUC</button>
+                <button type="button" id="demo-metric-pr" class="secondary" aria-pressed="false" data-demo-metric="pr_auc">PR-AUC</button>
+              </div>
+              <div id="demo-comparison-chart" class="demo-eval-chart" role="img" aria-label="Comparativa aún no cargada">
+                <div class="demo-eval-bar-row">
+                  <span>Modelo SaaS experimental</span>
+                  <div class="demo-eval-track"><div id="demo-bar-model" class="demo-eval-bar model"></div></div>
+                  <strong id="demo-bar-model-value">—</strong>
+                </div>
+                <div class="demo-eval-bar-row">
+                  <span>Línea base constante</span>
+                  <div class="demo-eval-track"><div id="demo-bar-baseline" class="demo-eval-bar baseline"></div></div>
+                  <strong id="demo-bar-baseline-value">—</strong>
+                </div>
+                <div class="demo-eval-axis"><span>0</span><span>0,5</span><span>1,0</span></div>
+              </div>
+              <p id="demo-metric-note" class="muted small"></p>
+              <p class="muted small">Partición cronológica: <strong id="demo-splits">—</strong>. Precisión en prueba: <strong id="demo-test-precision">—</strong>. Este modelo no se guarda ni se despliega.</p>
+            </section>
+            <section id="demo-panel-quality" role="tabpanel" aria-labelledby="demo-tab-quality" tabindex="0" hidden>
+              <h3>Distribuciones por variable</h3>
+              <p class="muted small">Medias en entrenamiento y prueba, más PSI orientativo frente al entrenamiento. <strong>Sin avisos no significa datos validados.</strong> Este gráfico no comprueba la procedencia de los datos.</p>
+              <div class="demo-eval-table-wrap">
+                <table class="demo-eval-table">
+                  <caption>Comparación agregada de las cinco variables ficticias</caption>
+                  <thead><tr><th scope="col">Variable</th><th scope="col">Media entreno</th><th scope="col">Media prueba</th><th scope="col">PSI</th></tr></thead>
+                  <tbody id="demo-quality-rows"></tbody>
+                </table>
+              </div>
+              <p class="muted small">El umbral PSI 0,2 es solo una regla de revisión, no una certificación estadística.</p>
+            </section>
+            <section id="demo-panel-robustness" role="tabpanel" aria-labelledby="demo-tab-robustness" tabindex="0" hidden>
+              <h3>Sensibilidad del modelo</h3>
+              <p class="muted small">Tres cambios hipotéticos aplicados <strong>solo sobre validación</strong>, sin modificar el modelo, el umbral ni las etiquetas. El resultado es variación en la puntuación, no cancelaciones evitadas.</p>
+              <div id="demo-stress-cards" class="demo-eval-stress-grid" aria-label="Pruebas de sensibilidad ficticias"></div>
+            </section>
+          </div>
+          <p class="muted small demo-eval-footnote">Prueba técnica de ingeniería. No hay datos SaaS reales, predicciones comerciales, ingresos recuperados ni decisiones de retención demostradas.</p>
         </section>
         <section id="pilot-readiness-panel" class="panel" aria-labelledby="pilot-readiness-heading">
           <p class="eyebrow">PREPARACIÓN COMERCIAL · V2.7</p>
