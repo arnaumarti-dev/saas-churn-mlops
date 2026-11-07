@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V3.0</p>
+      <p class="eyebrow">CHURN LAB · V3.1</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -188,6 +188,15 @@
               <code class="pilot-command">$env:PYTHONPATH="src"; python scripts/evaluate_saas_pilot.py --demo --as-of 2026-03-01</code>
               <p class="muted small"><strong>El CSV local solo debe utilizarse con autorización y controles adecuados.</strong> No escribas información personal, no subas CSV a GitHub/Render ni compartas el archivo en el chat. El comprobador no verifica la legalidad, la procedencia ni la calidad real de los datos.</p>
               <p class="muted small">Documentación de la evaluación offline: <code>docs/saas-offline-pilot-v30.md</code>. No se publica ningún predictor SaaS ni se guardan modelos o predicciones individuales.</p>
+              <section class="quality-panel" aria-labelledby="quality-panel-title">
+                <p class="eyebrow">CALIDAD Y ROBUSTEZ · V3.1</p>
+                <h3 id="quality-panel-title">Comprobar calidad de datos y sensibilidad del modelo</h3>
+                <p class="muted small">El informe offline añade estadísticas agregadas por partición y avisos orientativos de cambios en distribuciones. Los valores faltantes o inválidos se rechazan antes del entrenamiento: no se rellenan silenciosamente.</p>
+                <p class="muted small">También simula en <strong>validación solamente</strong> tres escenarios hipotéticos: 5 días menos de actividad, 2 incidencias adicionales y un MRR un 20 % menor. No se ajusta el modelo usando el test ni se atribuyen cancelaciones evitadas.</p>
+                <p class="muted small"><strong>Para leer un resumen corto de los resultados ficticios:</strong></p>
+                <code class="pilot-command">$env:PYTHONPATH="src"; python scripts/evaluate_saas_pilot.py --demo --as-of 2026-03-01 --format text</code>
+                <p class="muted small">El reporte completo en JSON sigue disponible por defecto. El PSI es una señal orientativa de cambio de distribución, no una prueba de estabilidad en empresas reales. Guía: <code>docs/saas-data-quality-v31.md</code>.</p>
+              </section>
             </section>
           </div>
         </section>

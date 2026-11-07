@@ -27,7 +27,7 @@ def test_authorized_offline_pipeline_demo_evaluates_without_row_data():
     assert result == training.evaluate_offline_saas_pilot(
         generate_experiment_rows(), as_of=AS_OF, origin="generated_demo"
     )
-    assert result["workflow"] == "offline_saas_pilot_v30"
+    assert result["workflow"] == "offline_saas_pilot_v31"
     assert result["origin_declared"] == "generated_demo"
     assert result["origin_not_independently_verified"]
     assert result["model_not_saved_or_deployed"]
@@ -82,7 +82,8 @@ def test_model_fit_and_threshold_never_see_holdout_or_identifiers(monkeypatch):
     )
     assert fits == [(list(FEATURES), 700)]
     assert choices == [(200, 200)]
-    assert predicts == [(list(FEATURES), 200), (list(FEATURES), 300)]
+    assert predicts == ([(list(FEATURES), 200), (list(FEATURES), 300)]
+                        + [(list(FEATURES), 200)] * 3)  # Only validation is stressed
 
 
 def test_protects_temporal_boundaries_and_fails_closed():
