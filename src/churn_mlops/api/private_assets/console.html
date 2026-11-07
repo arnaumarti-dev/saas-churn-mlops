@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V2.6</p>
+      <p class="eyebrow">CHURN LAB · V2.7</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -146,6 +146,20 @@
           <h3>Historial por empresa</h3>
           <p class="muted small">Cada ejecución guarda su escenario ficticio, fecha y recuentos agregados. Comparar escenarios no demuestra cambios reales del churn.</p>
           <div id="run-list" class="members" aria-live="polite"></div>
+        </section>
+        <section id="pilot-readiness-panel" class="panel" aria-labelledby="pilot-readiness-heading">
+          <p class="eyebrow">PREPARACIÓN COMERCIAL · V2.7</p>
+          <h2 id="pilot-readiness-heading">Preparar un piloto para empresas SaaS</h2>
+          <p class="muted small">El modelo actual continúa entrenado con datos de telecomunicaciones. Esta nueva fase define cómo evaluar la calidad de datos de suscripciones antes de entrenar y validar otro modelo. <strong>No hay predicciones SaaS comerciales ni carga de CSV en este panel.</strong></p>
+          <div class="pilot-flow" aria-label="Requisitos de preparación del piloto">
+            <div><strong>1 · Definir abandono</strong><span>Cancelación en los próximos 30 días a partir de una fecha de corte.</span></div>
+            <div><strong>2 · Preparar datos históricos</strong><span>Identificador opaco, fecha de corte, antigüedad, MRR, licencias, actividad y soporte.</span></div>
+            <div><strong>3 · Evitar fugas temporales</strong><span>Evaluar por periodos cronológicos y comprobar que las etiquetas tengan 30 días observados.</span></div>
+            <div><strong>4 · Validar antes de vender</strong><span>Comprobar calidad, permisos, seguridad y rendimiento del futuro modelo en clientes SaaS reales autorizados.</span></div>
+          </div>
+          <p class="muted small">El repositorio incluye un comprobador <strong>local y sin conexión</strong> con 240 cuentas inventadas y 12 fechas. Solo informa de preparación estructural; no entrena un modelo ni certifica el RGPD.</p>
+          <code class="pilot-command">PYTHONPATH=src python scripts/check_saas_pilot.py --demo --as-of 2026-03-01</code>
+          <p class="muted small">Documentación: <code>docs/saas-pilot-readiness-v27.md</code>. No envíes datos reales al navegador ni a la demo pública.</p>
         </section>
       </div>
     </div>

@@ -61,3 +61,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .comparison-rate{font-size:1.5rem;font-variant-numeric:tabular-nums}
 .comparison-card p{font-size:.81rem;margin:.3rem 0}
 @media(max-width:950px){.comparison-grid{grid-template-columns:1fr}}
+
+/* v2.7: static pilot-data contract. No file upload or customer data input. */
+#pilot-readiness-panel{border-color:#345375}
+.pilot-flow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin:1rem 0}
+.pilot-flow div{background:#101927;border:1px solid var(--border);border-radius:10px;padding:.75rem;display:grid;gap:.35rem}
+.pilot-flow strong{font-size:.84rem}
+.pilot-flow span{font-size:.82rem;color:var(--muted)}
+.pilot-command{display:block;overflow-wrap:anywhere;white-space:normal;border-radius:8px;border:1px solid var(--border);padding:.75rem;background:#0c1523;color:#cfe4ff;font-size:.79rem}
+@media(max-width:750px){.pilot-flow{grid-template-columns:1fr}}

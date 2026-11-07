@@ -93,6 +93,12 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="run-scenario"' in html.text
         assert 'id="compare-scenarios"' in html.text
         assert 'id="comparison-results"' in html.text
+        assert 'CHURN LAB · V2.7' in html.text
+        assert 'id="pilot-readiness-panel"' in html.text
+        assert "saas-subscriptions-v1" not in html.text  # contract details live in docs
+        assert "scripts/check_saas_pilot.py" in html.text
+        assert "No hay predicciones SaaS comerciales" in html.text
+        assert 'type="file"' not in html.text
         assert 'value="at_risk"' in html.text
         assert 'value="loyal"' in html.text
         assert 'id="trend-plot"' in html.text
