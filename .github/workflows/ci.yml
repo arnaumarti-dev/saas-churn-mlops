@@ -35,6 +35,8 @@ jobs:
         run: PYTHONPATH=src python scripts/check_saas_pilot.py --demo --as-of 2026-03-01 > /dev/null
       - name: Verify isolated fictional SaaS experiment and fixed holdout diagnostics (not production validation)
         run: PYTHONPATH=src python scripts/run_saas_experiment.py --demo > /dev/null
+      - name: Verify offline SaaS pilot training with invented data only
+        run: PYTHONPATH=src python scripts/evaluate_saas_pilot.py --demo --as-of 2026-03-01 > /dev/null
 
   end-to-end:
     name: Train model and test real API prediction
