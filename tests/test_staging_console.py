@@ -93,7 +93,10 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="run-scenario"' in html.text
         assert 'id="compare-scenarios"' in html.text
         assert 'id="comparison-results"' in html.text
-        assert 'CHURN LAB · V2.9' in html.text
+        assert 'CHURN LAB · V3.0' in html.text
+        assert 'id="offline-pilot-title"' in html.text
+        assert "scripts/evaluate_saas_pilot.py" in html.text
+        assert "El CSV local solo debe utilizarse con autorización" in html.text
         assert 'id="holdout-diagnostics-heading"' in html.text
         assert "held_out_test_diagnostics" in html.text
         assert "docs/saas-holdout-diagnostics-v29.md" in html.text
