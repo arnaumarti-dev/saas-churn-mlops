@@ -80,3 +80,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .holdout-diagnostics{margin-top:1rem;border-top:1px solid #45698e;padding-top:1rem}
 .holdout-diagnostics .pilot-flow{margin:.8rem 0}
 .holdout-diagnostics h3{margin:.3rem 0 .7rem}
+
+/* v3.0: documentation-only offline pilot instructions, no upload controls. */
+.offline-pilot-panel{border-top:1px solid #45698e;margin-top:1.15rem;padding-top:1.1rem}
+.offline-pilot-panel h3{margin:.3rem 0 .65rem;font-size:1rem}
+.offline-pilot-panel p{margin:.45rem 0 .75rem}
