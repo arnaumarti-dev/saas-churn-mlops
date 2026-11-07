@@ -93,7 +93,10 @@ def test_console_requires_login_and_is_strictly_private(config):
         assert 'id="run-scenario"' in html.text
         assert 'id="compare-scenarios"' in html.text
         assert 'id="comparison-results"' in html.text
-        assert 'CHURN LAB · V2.8' in html.text
+        assert 'CHURN LAB · V2.9' in html.text
+        assert 'id="holdout-diagnostics-heading"' in html.text
+        assert "held_out_test_diagnostics" in html.text
+        assert "docs/saas-holdout-diagnostics-v29.md" in html.text
         assert 'id="experiment-heading"' in html.text
         assert "scripts/run_saas_experiment.py" in html.text
         assert "El modelo no se ha publicado" in html.text
