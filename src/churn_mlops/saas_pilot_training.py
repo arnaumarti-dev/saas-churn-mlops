@@ -18,6 +18,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from churn_mlops.saas_quality import summarize_quality, validation_stress_scenarios
 from churn_mlops.pilot_readiness import (
     COLUMNS, DataContractError, HORIZON_DAYS, check_pilot_readiness,
 )
@@ -115,9 +116,17 @@ def evaluate_offline_saas_pilot(
     baseline_probability = float(np.mean(y_train))
     baseline = np.full(len(y_test), baseline_probability, dtype=float)
 
+    # Descriptive quality checks never select features, parameters or thresholds.
+    # Stress scenarios query VALIDATION only and cannot re-fit the model.
+    quality = summarize_quality(train, validation, test)
+    robustness = validation_stress_scenarios(
+        pipeline, inputs(validation), validation_probabilities,
+        decision_threshold=threshold,
+    )
+
     # All model outputs are only aggregate metrics.
     return {
-        "workflow": "offline_saas_pilot_v30",
+        "workflow": "offline_saas_pilot_v31",
         "origin_declared": origin,
         "origin_not_independently_verified": True,
         "model_not_saved_or_deployed": True,
@@ -152,6 +161,8 @@ def evaluate_offline_saas_pilot(
         "held_out_test_constant_baseline": _scores(
             y_test, baseline, threshold
         ),
+        "data_quality": quality,
+        "validation_robustness": robustness,
         "limitations": [
             "La procedencia y autorización de los datos no se pueden "
             "comprobar automáticamente",
@@ -163,5 +174,6 @@ def evaluate_offline_saas_pilot(
             "No se ha demostrado que contactar con cuentas de riesgo "
             "evite cancelaciones ni genere ingresos",
             "No se ofrece una API SaaS de producción ni un modelo desplegado",
+            "PSI y escenarios de estrés son diagnósticos de ingeniería, no certificación estadística",
         ],
     }
