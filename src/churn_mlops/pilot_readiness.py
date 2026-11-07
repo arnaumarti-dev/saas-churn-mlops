@@ -104,7 +104,7 @@ def check_pilot_readiness(
     by_date = sorted({snapshot for snapshot, _ in cleaned})
     # Entire snapshot dates go to one split, never splitting the same date.
     train_end = max(1, int(len(by_date) * 0.60))
-    val_end = min(len(by_date) - 1, max(train_end + 1, int(len(by_date) * 0.80)))
+    val_end = min(len(by_date), max(train_end + 1, int(len(by_date) * 0.80)))
     groups = (
         ("training", set(by_date[:train_end])),
         ("validation", set(by_date[train_end:val_end])),
