@@ -183,6 +183,14 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#overview-tools")).to_be_visible()
         expect(owner.locator("#overview-runs")).to_have_text("0")
         expect(owner.locator("#overview-rate")).to_have_text("—")
+        expect(owner.locator("#pilot-readiness-panel")).to_be_visible()
+        expect(owner.locator("#pilot-readiness-panel")).to_contain_text(
+            "El modelo actual continúa entrenado con datos de telecomunicaciones"
+        )
+        expect(owner.locator("#pilot-readiness-panel")).to_contain_text(
+            "check_saas_pilot.py"
+        )
+        expect(owner.locator('input[type="file"]')).to_have_count(0)
         expect(owner.locator("#run-scenario")).to_have_value("baseline")
         expect(owner.locator("#run-scenario option")).to_have_count(3)
 
