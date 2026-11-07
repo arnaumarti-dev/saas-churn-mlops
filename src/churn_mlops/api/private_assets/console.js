@@ -534,5 +534,212 @@
     selectOrg().catch((e) => message(e.message, true));
   });
 
+  // Fixed, generated SaaS-only reference. Never uses company history, uploads,
+  // browser persistence or customer predictions. Only aggregated numbers.
+  let demoResults = null;
+  let demoSelectedMetric = "roc_auc";
+  const demoTabNames = ["performance", "quality", "robustness"];
+  const demoMetricLabels = {
+    roc_auc: "ROC-AUC", pr_auc: "PR-AUC"
+  };
+  const demoFeatureLabels = {
+    tenure_months: "Antigüedad (meses)",
+    mrr_eur: "MRR (€)",
+    licensed_seats: "Licencias",
+    active_days_30d: "Días activos (30 días)",
+    support_tickets_30d: "Tickets (30 días)"
+  };
+  const demoStressLabels = {
+    activity_5_days_less: "5 días menos de actividad",
+    support_2_more_tickets: "2 tickets adicionales",
+    mrr_20_percent_lower: "MRR un 20 % menor"
+  };
+
+  function demoDecimal(value, digits = 3) {
+    return Number(value).toLocaleString("es-ES", {
+      minimumFractionDigits: digits, maximumFractionDigits: digits
+    });
+  }
+
+  function demoPct(value) {
+    return demoDecimal(value * 100, 1) + " %";
+  }
+
+  function selectDemoTab(name, shouldFocus = false) {
+    if (!demoTabNames.includes(name)) return;
+    for (const key of demoTabNames) {
+      const selected = key === name;
+      const tab = $("demo-tab-" + key);
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      $("demo-panel-" + key).hidden = !selected;
+    }
+    if (shouldFocus) $("demo-tab-" + name).focus();
+  }
+
+  demoTabNames.forEach((name, index) => {
+    const tab = $("demo-tab-" + name);
+    tab.addEventListener("click", () => selectDemoTab(name));
+    tab.addEventListener("keydown", (event) => {
+      const next = ({
+        ArrowRight: (index + 1) % demoTabNames.length,
+        ArrowLeft: (index + demoTabNames.length - 1) % demoTabNames.length,
+        Home: 0, End: demoTabNames.length - 1
+      })[event.key];
+      if (next === undefined) return;
+      event.preventDefault();
+      selectDemoTab(demoTabNames[next], true);
+    });
+  });
+
+  function renderDemoMetric() {
+    if (!demoResults) return;
+    const key = demoSelectedMetric;
+    const model = demoResults.model[key], baseline = demoResults.baseline[key];
+    for (const metric of Object.keys(demoMetricLabels)) {
+      $("demo-metric-" + (metric === "roc_auc" ? "roc" : "pr"))
+        .setAttribute("aria-pressed", String(metric === key));
+    }
+    $("demo-bar-model").style.width = (model * 100) + "%";
+    $("demo-bar-baseline").style.width = (baseline * 100) + "%";
+    $("demo-bar-model-value").textContent = demoDecimal(model);
+    $("demo-bar-baseline-value").textContent = demoDecimal(baseline);
+    $("demo-comparison-chart").setAttribute(
+      "aria-label", demoMetricLabels[key] + " en cuentas ficticias: modelo "
+      + demoDecimal(model) + "; línea base " + demoDecimal(baseline)
+    );
+    $("demo-metric-note").textContent = key === "roc_auc"
+      ? "ROC-AUC mide ordenación de bajas ficticias y no-bajas. 0,5 equivale al azar."
+      : "PR-AUC (average precision) refleja la precisión-recall de un problema con pocas bajas.";
+  }
+
+  for (const metric of Object.keys(demoMetricLabels)) {
+    $("demo-metric-" + (metric === "roc_auc" ? "roc" : "pr"))
+      .addEventListener("click", () => {
+        demoSelectedMetric = metric;
+        renderDemoMetric();
+      });
+  }
+
+  function renderDemoQuality(report) {
+    const rows = $("demo-quality-rows");
+    rows.replaceChildren();
+    for (const feature of report.quality.features) {
+      const tr = document.createElement("tr");
+      const columns = [
+        demoFeatureLabels[feature.name] || "Variable del modelo",
+        demoDecimal(feature.training_mean, 2),
+        demoDecimal(feature.test_mean, 2),
+        feature.psi_test === null ? "—" : demoDecimal(feature.psi_test)
+      ];
+      columns.forEach((value, index) => {
+        const cell = document.createElement(index === 0 ? "th" : "td");
+        if (index === 0) cell.setAttribute("scope", "row");
+        cell.textContent = value;
+        tr.append(cell);
+      });
+      rows.append(tr);
+    }
+  }
+
+  function renderDemoRobustness(report) {
+    const list = $("demo-stress-cards");
+    list.replaceChildren();
+    for (const item of report.robustness.scenarios) {
+      const card = document.createElement("article");
+      card.className = "demo-eval-stress-card";
+      const title = document.createElement("strong");
+      title.textContent = demoStressLabels[item.scenario] || "Escenario ficticio";
+      const change = document.createElement("p");
+      const delta = item.mean_score_change_pp;
+      change.textContent = "Cambio medio de puntuación: "
+        + (delta > 0 ? "+" : "") + demoDecimal(delta, 2) + " puntos porcentuales";
+      const flags = document.createElement("p");
+      flags.textContent = "Perfiles sobre el umbral: "
+        + item.risk_flags_above_validation_threshold
+        + " · Coincidencia top 20 %: " + item.same_top_20pct_count
+        + " de " + item.top_20pct_count;
+      card.append(title, change, flags);
+      list.append(card);
+    }
+  }
+
+  function validDemoReport(data) {
+    if (!data || data.demo_only !== true
+        || data.source !== "fixed_seed_28_fictional_accounts"
+        || data.not_real_customer_data !== true
+        || data.not_validated_for_production !== true
+        || data.accounts !== 1200
+        || !data.splits || data.splits.training !== 700
+        || data.splits.validation !== 200 || data.splits.test !== 300
+        || !data.model || !data.baseline || !data.quality || !data.robustness
+        || !Array.isArray(data.quality.features)
+        || data.quality.features.length !== 5
+        || !Array.isArray(data.robustness.scenarios)
+        || data.robustness.scenarios.length !== 3
+        || data.robustness.evaluated_split !== "validation_only"
+        || !Number.isInteger(data.quality.distribution_flag_count)
+        || data.quality.distribution_flag_count < 0) {
+      return false;
+    }
+    for (const key of ["roc_auc", "pr_auc", "precision", "recall"]) {
+      if (!Number.isFinite(data.model[key]) || data.model[key] < 0
+          || data.model[key] > 1) return false;
+    }
+    for (const key of ["roc_auc", "pr_auc"]) {
+      if (!Number.isFinite(data.baseline[key]) || data.baseline[key] < 0
+          || data.baseline[key] > 1) return false;
+    }
+    for (const feature of data.quality.features) {
+      if (typeof feature.name !== "string"
+          || !Number.isFinite(feature.training_mean)
+          || !Number.isFinite(feature.test_mean)
+          || (feature.psi_test !== null && (!Number.isFinite(feature.psi_test)
+          || feature.psi_test < 0))) return false;
+    }
+    for (const scenario of data.robustness.scenarios) {
+      if (!demoStressLabels[scenario.scenario]
+          || !Number.isFinite(scenario.mean_score_change_pp)
+          || !Number.isInteger(scenario.risk_flags_above_validation_threshold)
+          || !Number.isInteger(scenario.same_top_20pct_count)
+          || !Number.isInteger(scenario.top_20pct_count)) return false;
+    }
+    return true;
+  }
+
+  function renderDemoEvaluation(report) {
+    demoResults = report;
+    $("demo-kpi-accounts").textContent = report.accounts.toLocaleString("es-ES");
+    $("demo-kpi-auc").textContent = demoDecimal(report.model.roc_auc);
+    $("demo-kpi-recall").textContent = demoPct(report.model.recall);
+    $("demo-kpi-flags").textContent = String(report.quality.distribution_flag_count);
+    $("demo-splits").textContent = report.splits.training + " entreno · "
+      + report.splits.validation + " validación · " + report.splits.test + " prueba";
+    $("demo-test-precision").textContent = demoPct(report.model.precision);
+    renderDemoMetric();
+    renderDemoQuality(report);
+    renderDemoRobustness(report);
+    $("demo-eval-content").hidden = false;
+    $("demo-eval-status").textContent = "Ejemplo ficticio cargado (semilla 28).";
+  }
+
+  async function loadDemoEvaluation() {
+    $("demo-eval-retry").hidden = true;
+    $("demo-eval-status").textContent = "Calculando resultados ficticios…";
+    try {
+      const report = await api("GET", "/saas/v3/demo-evaluation");
+      if (!validDemoReport(report)) {
+        throw new Error("No se ha podido validar el informe ficticio.");
+      }
+      renderDemoEvaluation(report);
+    } catch {
+      $("demo-eval-status").textContent =
+        "No se pudo cargar el ejemplo ficticio. Puedes reintentarlo sin afectar a tus empresas.";
+      $("demo-eval-retry").hidden = false;
+    }
+  }
+  $("demo-eval-retry").addEventListener("click", loadDemoEvaluation);
+  loadDemoEvaluation();
+
   reload("").then(() => message("Panel listo."), (e) => message(e.message, true));
 })();
