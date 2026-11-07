@@ -202,6 +202,12 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator(".holdout-diagnostics")).to_contain_text(
             "sin suponer bajas evitadas"
         )
+        expect(owner.locator("#offline-pilot-title")).to_contain_text(
+            "Evaluar un dataset histórico SaaS sin subirlo a la plataforma"
+        )
+        expect(owner.locator(".offline-pilot-panel")).to_contain_text(
+            "evaluate_saas_pilot.py"
+        )
         expect(owner.locator('input[type="file"]')).to_have_count(0)
         expect(owner.locator("#run-scenario")).to_have_value("baseline")
         expect(owner.locator("#run-scenario option")).to_have_count(3)
