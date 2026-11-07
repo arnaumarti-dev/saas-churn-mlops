@@ -4,9 +4,9 @@
 
 ## Qué hemos construido
 
-- **Generador** determinista de **1.200 cuentas ficticias** y 12 fechas de corte mensuales en 2025. Cumple el contrato \`saas-subscriptions-v1\` de v2.7. Las cancelaciones se generan a partir de una fórmula inventada que depende, entre otras cosas, de actividad, antigüedad y soporte, más un componente aleatorio.
-- **Modelo**: regresión logística con imputación y normalización ajustadas solo en entrenamiento. Entradas permitidas: \`tenure_months\`, \`mrr_eur\`, \`licensed_seats\`, \`active_days_30d\`, \`support_tickets_30d\`.
-- **Excluidos del modelo**: \`account_id\`, \`snapshot_date\` y la etiqueta futura \`churn_next_30d\`. No deben entrar en el vector predictivo.
+- **Generador** determinista de **1.200 cuentas ficticias** y 12 fechas de corte mensuales en 2025. Cumple el contrato `saas-subscriptions-v1` de v2.7. Las cancelaciones se generan a partir de una fórmula inventada que depende, entre otras cosas, de actividad, antigüedad y soporte, más un componente aleatorio.
+- **Modelo**: regresión logística con imputación y normalización ajustadas solo en entrenamiento. Entradas permitidas: `tenure_months`, `mrr_eur`, `licensed_seats`, `active_days_30d`, `support_tickets_30d`.
+- **Excluidos del modelo**: `account_id`, `snapshot_date` y la etiqueta futura `churn_next_30d`. No deben entrar en el vector predictivo.
 - **Partición cronológica** de las 12 fechas: 7 meses para entrenamiento (700 cuentas), 2 para validación (200) y los 3 últimos para test (300). Las cuentas y fechas no se repiten entre los conjuntos.
 - **Selección de umbral**: solo sobre validación, maximizando F2, sin ver el test. El test solo se utiliza para la evaluación final.
 - **Línea base**: probabilidad constante igual a la tasa de cancelación observada en el entrenamiento. Permite comparar ROC-AUC, PR-AUC y Brier; no es otro modelo sofisticado.
@@ -15,15 +15,15 @@
 
 ### Ejecutar desde Windows PowerShell
 
-Usando tu instalación de Python y las dependencias de \`requirements.txt\`:
+Usando tu instalación de Python y las dependencias de `requirements.txt`:
 
-\`\`\`powershell
+```powershell
 cd C:\Users\arnau\proyectos\saas-churn-mlops
 $env:PYTHONPATH="src"
 python scripts/run_saas_experiment.py --demo
-\`\`\`
+```
 
-El programa imprime en consola un JSON agregado con \`validation_model\`, \`held_out_test_model\` y \`held_out_test_constant_baseline\`. **No requiere Docker ni contacto con el servicio privado.** Debes obtener los valores reales del propio programa; no están fijados en esta documentación.
+El programa imprime en consola un JSON agregado con `validation_model`, `held_out_test_model` y `held_out_test_constant_baseline`. **No requiere Docker ni contacto con el servicio privado.** Debes obtener los valores reales del propio programa; no están fijados en esta documentación.
 
 ### Cómo interpretar el resultado
 
@@ -35,7 +35,7 @@ Aunque las fechas están ordenadas, **la procedencia de las variables es artific
 
 ### Qué se mantiene sin cambios
 
-El predictor Telco sigue usando su pipeline y \`models/best_model.joblib\`. Esta rama no lo sobreescribe ni despliega el nuevo experimento. Las rutas \`/predict\`, \`/predict/batch\`, la consola privada, los modelos de v2.6 y la gestión de usuarios no se transforman en inferencia SaaS.
+El predictor Telco sigue usando su pipeline y `models/best_model.joblib`. Esta rama no lo sobreescribe ni despliega el nuevo experimento. Las rutas `/predict`, `/predict/batch`, la consola privada, los modelos de v2.6 y la gestión de usuarios no se transforman en inferencia SaaS.
 
 **No añade migraciones PostgreSQL, dependencias nuevas, servicios, formularios de carga de archivos, cuentas, facturación ni cambios de Render.** La demostración pública continúa siendo educativa y se mantiene independiente.
 
