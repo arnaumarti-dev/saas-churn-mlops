@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V2.8</p>
+      <p class="eyebrow">CHURN LAB · V2.9</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -167,6 +167,19 @@
             <p class="muted small"><strong>No es una predicción SaaS comercial.</strong> La etiqueta de abandono proviene de una regla artificial. El modelo no se ha publicado, no se guarda como artefacto y no sustituye al modelo Telco.</p>
             <code class="pilot-command">$env:PYTHONPATH="src"; python scripts/run_saas_experiment.py --demo</code>
             <p class="muted small">El comando se ejecuta en PowerShell con las dependencias Python del proyecto. No envía datos ni resultados al navegador. Guía: <code>docs/saas-synthetic-experiment-v28.md</code>.</p>
+            <section class="holdout-diagnostics" aria-labelledby="holdout-diagnostics-heading">
+              <p class="eyebrow">DIAGNÓSTICOS EXPERIMENTALES · V2.9</p>
+              <h3 id="holdout-diagnostics-heading">Estabilidad, errores y capacidad de seguimiento</h3>
+              <p class="muted small">El informe offline añade resultados agregados para octubre, noviembre y diciembre de 2025, una matriz de aciertos y errores, y un desglose descriptivo por días de actividad anteriores a cada fecha de corte.</p>
+              <div class="pilot-flow" aria-label="Presupuestos de contacto simulados">
+                <div><strong>5 % de cuentas</strong><span>15 contactos ficticios de 300, ordenados por riesgo.</span></div>
+                <div><strong>10 % de cuentas</strong><span>30 contactos ficticios de 300, ordenados por riesgo.</span></div>
+                <div><strong>20 % de cuentas</strong><span>60 contactos ficticios de 300, ordenados por riesgo.</span></div>
+                <div><strong>Comparación</strong><span>Cancelaciones detectadas frente a una expectativa de selección aleatoria; sin suponer bajas evitadas.</span></div>
+              </div>
+              <p class="muted small"><strong>Solo datos generados.</strong> La comparación no demuestra estabilidad temporal en producción, eficacia comercial, ahorro económico ni cumplimiento de privacidad con datos reales.</p>
+              <p class="muted small">Para ver los resultados, ejecuta el mismo comando offline anterior y consulta <code>held_out_test_diagnostics</code>. Guía: <code>docs/saas-holdout-diagnostics-v29.md</code>.</p>
+            </section>
           </div>
         </section>
       </div>

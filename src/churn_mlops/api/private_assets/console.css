@@ -75,3 +75,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .experiment-callout{margin-top:1.15rem;padding:1rem;border:1px solid #45698e;border-radius:12px;background:#101e30}
 .experiment-callout h3{margin:.2rem 0 .7rem;font-size:1rem}
 .experiment-callout p{margin:.35rem 0 .65rem}
+
+/* v2.9: static offline diagnostic guidance, no API, charts of real data, or upload. */
+.holdout-diagnostics{margin-top:1rem;border-top:1px solid #45698e;padding-top:1rem}
+.holdout-diagnostics .pilot-flow{margin:.8rem 0}
+.holdout-diagnostics h3{margin:.3rem 0 .7rem}

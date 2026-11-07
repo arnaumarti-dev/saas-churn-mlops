@@ -196,6 +196,12 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#pilot-readiness-panel")).to_contain_text(
             "run_saas_experiment.py"
         )
+        expect(owner.locator("#holdout-diagnostics-heading")).to_contain_text(
+            "Estabilidad, errores y capacidad de seguimiento"
+        )
+        expect(owner.locator(".holdout-diagnostics")).to_contain_text(
+            "sin suponer bajas evitadas"
+        )
         expect(owner.locator('input[type="file"]')).to_have_count(0)
         expect(owner.locator("#run-scenario")).to_have_value("baseline")
         expect(owner.locator("#run-scenario option")).to_have_count(3)

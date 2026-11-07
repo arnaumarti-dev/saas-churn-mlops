@@ -21,11 +21,12 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from churn_mlops.saas_diagnostics import diagnose_synthetic_holdout
 from churn_mlops.pilot_readiness import (
     COLUMNS, check_pilot_readiness,
 )
 
-EXPERIMENT_NAME = "synthetic_saas_churn_v28"
+EXPERIMENT_NAME = "synthetic_saas_churn_v29"
 SEED = 28
 HORIZON_AS_OF = date(2026, 3, 1)
 FEATURES = (
@@ -219,6 +220,12 @@ def run_synthetic_experiment(*, seed: int = SEED) -> dict:
         "held_out_test_constant_baseline": _scores(
             test_y, baseline_p, selected_threshold
         ),
+        "held_out_test_diagnostics": diagnose_synthetic_holdout(
+            test_y, test_p,
+            test["snapshot_date"].to_numpy(),
+            test["active_days_30d"].astype(float).to_numpy(),
+            validation_selected_threshold=selected_threshold,
+        ),
         "limitations": [
             "El churn se ha generado con una regla artificial y aleatoria",
             "Los resultados solo describen este experimento inventado",
@@ -226,6 +233,7 @@ def run_synthetic_experiment(*, seed: int = SEED) -> dict:
             "No se ha demostrado calibración externa ni utilidad económica",
             "No se ha guardado ni desplegado un modelo SaaS",
             "Solo se mide el holdout cronológico sin CV, auditoría de fuente o causalidad",
+            "Los diagnósticos temporales y de capacidad son exploratorios y no prueban impacto real",
         ],
     }
     return result
