@@ -22,6 +22,7 @@ import sys
 from churn_mlops.pilot_readiness import DataContractError
 from churn_mlops.saas_experiment import generate_experiment_rows
 from churn_mlops.saas_pilot_training import evaluate_offline_saas_pilot
+from churn_mlops.saas_quality import format_summary
 from check_saas_pilot import read_local_csv
 
 
@@ -34,6 +35,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="1.200 cuentas ficticias reproducibles")
     inputs.add_argument("--csv", type=str,
                         help="CSV local autorizado, nunca subir a GitHub/Render")
+    parser.add_argument("--format", choices=("json", "text"), default="json",
+                        help="JSON agregado (por defecto) o resumen legible en consola")
     parser.add_argument("--as-of", required=True,
                         help="Fecha YYYY-MM-DD que cubre las etiquetas posteriores")
     parser.add_argument("--confirm-authorized-offline-data", action="store_true",
@@ -75,7 +78,10 @@ def main(argv: list[str] | None = None) -> int:
         }, ensure_ascii=False), file=sys.stderr)
         return 2
 
-    print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
+    if args.format == "text":
+        print(format_summary(result))
+    else:
+        print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
     return 0
 
 
