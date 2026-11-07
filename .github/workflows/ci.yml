@@ -33,6 +33,8 @@ jobs:
         run: PYTHONPATH=src pytest -q
       - name: Verify offline fictional SaaS pilot readiness (not model validation)
         run: PYTHONPATH=src python scripts/check_saas_pilot.py --demo --as-of 2026-03-01 > /dev/null
+      - name: Verify isolated fictional SaaS experiment (not production validation)
+        run: PYTHONPATH=src python scripts/run_saas_experiment.py --demo > /dev/null
 
   end-to-end:
     name: Train model and test real API prediction

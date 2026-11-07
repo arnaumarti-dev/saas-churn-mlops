@@ -70,3 +70,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 .pilot-flow span{font-size:.82rem;color:var(--muted)}
 .pilot-command{display:block;overflow-wrap:anywhere;white-space:normal;border-radius:8px;border:1px solid var(--border);padding:.75rem;background:#0c1523;color:#cfe4ff;font-size:.79rem}
 @media(max-width:750px){.pilot-flow{grid-template-columns:1fr}}
+
+/* v2.8: offline-only experiment instructions, never a live model dashboard. */
+.experiment-callout{margin-top:1.15rem;padding:1rem;border:1px solid #45698e;border-radius:12px;background:#101e30}
+.experiment-callout h3{margin:.2rem 0 .7rem;font-size:1rem}
+.experiment-callout p{margin:.35rem 0 .65rem}

@@ -190,6 +190,12 @@ def test_real_private_browser_organization_lifecycle(
         expect(owner.locator("#pilot-readiness-panel")).to_contain_text(
             "check_saas_pilot.py"
         )
+        expect(owner.locator("#pilot-readiness-panel")).to_contain_text(
+            "Primer modelo de churn SaaS con ejemplos inventados"
+        )
+        expect(owner.locator("#pilot-readiness-panel")).to_contain_text(
+            "run_saas_experiment.py"
+        )
         expect(owner.locator('input[type="file"]')).to_have_count(0)
         expect(owner.locator("#run-scenario")).to_have_value("baseline")
         expect(owner.locator("#run-scenario option")).to_have_count(3)

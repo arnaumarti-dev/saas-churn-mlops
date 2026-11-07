@@ -20,7 +20,7 @@
 
   <main id="main" class="shell">
     <div class="intro">
-      <p class="eyebrow">CHURN LAB · V2.7</p>
+      <p class="eyebrow">CHURN LAB · V2.8</p>
       <h1>Gestiona tus empresas de pruebas.</h1>
       <p class="muted">Panel privado experimental. Utiliza únicamente cuentas y nombres ficticios; no introduzcas datos reales de clientes ni compartas códigos de invitación públicamente.</p>
     </div>
@@ -160,6 +160,14 @@
           <p class="muted small">El repositorio incluye un comprobador <strong>local y sin conexión</strong> con 240 cuentas inventadas y 12 fechas. Solo informa de preparación estructural; no entrena un modelo ni certifica el RGPD.</p>
           <code class="pilot-command">PYTHONPATH=src python scripts/check_saas_pilot.py --demo --as-of 2026-03-01</code>
           <p class="muted small">Documentación: <code>docs/saas-pilot-readiness-v27.md</code>. No envíes datos reales al navegador ni a la demo pública.</p>
+          <div class="experiment-callout" aria-labelledby="experiment-heading">
+            <p class="eyebrow">EXPERIMENTO OFFLINE · V2.8</p>
+            <h3 id="experiment-heading">Primer modelo de churn SaaS con ejemplos inventados</h3>
+            <p class="muted small">La nueva prueba experimental genera 1.200 cuentas ficticias, entrena una regresión logística y la compara con una línea base de prevalencia usando una partición cronológica. Evalúa ROC-AUC, PR-AUC, precisión, recall y calibración.</p>
+            <p class="muted small"><strong>No es una predicción SaaS comercial.</strong> La etiqueta de abandono proviene de una regla artificial. El modelo no se ha publicado, no se guarda como artefacto y no sustituye al modelo Telco.</p>
+            <code class="pilot-command">$env:PYTHONPATH="src"; python scripts/run_saas_experiment.py --demo</code>
+            <p class="muted small">El comando se ejecuta en PowerShell con las dependencias Python del proyecto. No envía datos ni resultados al navegador. Guía: <code>docs/saas-synthetic-experiment-v28.md</code>.</p>
+          </div>
         </section>
       </div>
     </div>
