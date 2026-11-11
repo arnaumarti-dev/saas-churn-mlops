@@ -1,6 +1,6 @@
 # Minimal runtime dependencies; match the versions used in requirements.txt
 pandas==2.2.2
-numpy==1.26.4
+numpy==2.5.4
 scikit-learn==1.5.1
 xgboost==2.1.1
 fastapi==0.162.0
