@@ -1,6 +1,6 @@
 pandas==2.2.2
 numpy==1.26.4
-scikit-learn==1.5.1
+scikit-learn==1.9.1
 xgboost==2.1.1
 mlflow==3.17.2
 fastapi==0.162.0
