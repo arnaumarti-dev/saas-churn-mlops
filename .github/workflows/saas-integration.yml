@@ -34,7 +34,7 @@ permissions:
 jobs:
   security-and-rls:
     name: Signed OIDC tokens and PostgreSQL tenant RLS
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     services:
       postgres:
