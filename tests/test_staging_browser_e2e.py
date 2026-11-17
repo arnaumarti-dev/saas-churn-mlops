@@ -145,7 +145,7 @@ def test_real_private_browser_organization_lifecycle(
     # Without an actual session neither the console nor its JS/CSS are public.
     guest = chromium.new_context(ignore_https_errors=True)
     try:
-        for path in ("/console", "/console.js", "/console.css", "/organizations/list"):
+        for path in ("/console", "/console.js", "/console.css", "/demo-evaluation", "/organizations/list"):
             res = guest.request.get(url + "/saas/v3" + path)
             assert res.status == 401, (path, res.status)
     finally:
@@ -207,6 +207,34 @@ def test_real_private_browser_organization_lifecycle(
         )
         expect(owner.locator(".offline-pilot-panel")).to_contain_text(
             "evaluate_saas_pilot.py"
+        )
+        # v3.2 private generated results, independent of tenant selection.
+        expect(owner.locator("#demo-eval-content")).to_be_visible()
+        expect(owner.locator("#demo-eval-status")).to_contain_text("semilla 28")
+        expect(owner.locator("#demo-kpi-accounts")).to_have_text("1.200")
+        expect(owner.locator("#demo-kpi-auc")).to_have_text("0,808")
+        expect(owner.locator("#demo-kpi-recall")).to_have_text("75,0 %")
+        expect(owner.locator("#demo-kpi-flags")).to_have_text("0")
+        expect(owner.locator("#demo-tab-performance")).to_have_attribute("aria-selected", "true")
+        expect(owner.locator("#demo-bar-model-value")).to_have_text("0,808")
+        expect(owner.locator("#demo-bar-baseline-value")).to_have_text("0,500")
+        owner.locator("#demo-metric-pr").click()
+        expect(owner.locator("#demo-bar-model-value")).to_have_text("0,434")
+        expect(owner.locator("#demo-bar-baseline-value")).to_have_text("0,147")
+        expect(owner.locator("#demo-metric-pr")).to_have_attribute("aria-pressed", "true")
+        owner.locator("#demo-tab-quality").click()
+        expect(owner.locator("#demo-panel-quality")).to_be_visible()
+        expect(owner.locator("#demo-panel-performance")).to_be_hidden()
+        expect(owner.locator("#demo-quality-rows tr")).to_have_count(5)
+        owner.locator("#demo-tab-quality").press("ArrowRight")
+        expect(owner.locator("#demo-tab-robustness")).to_have_attribute("aria-selected", "true")
+        expect(owner.locator("#demo-panel-robustness")).to_be_visible()
+        expect(owner.locator("#demo-stress-cards article")).to_have_count(3)
+        expect(owner.locator("#demo-stress-cards")).to_contain_text("5 días menos de actividad")
+        owner.locator("#demo-tab-robustness").press("Home")
+        expect(owner.locator("#demo-tab-performance")).to_have_attribute("aria-selected", "true")
+        expect(owner.locator("#demo-evaluation-panel")).to_contain_text(
+            "No pertenece a la empresa seleccionada"
         )
         expect(owner.locator("#quality-panel-title")).to_contain_text(
             "Comprobar calidad de datos y sensibilidad del modelo"
