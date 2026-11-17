@@ -1,12 +1,35 @@
 version: 2
 updates:
+  # Keep a small review queue without disabling security updates.
   - package-ecosystem: pip
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
+    groups:
+      routine-python:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # NumPy 2.5+ requires Python >=3.12; project images/CI use Python 3.11.
+      # Reassess with a separately tested Python/NumPy migration.
+      - dependency-name: numpy
+        versions:
+          - ">=2.5.0"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      routine-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
