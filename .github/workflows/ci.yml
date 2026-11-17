@@ -21,7 +21,7 @@ jobs:
           node --check src/churn_mlops/api/static/dashboard-utils.js
           node --test tests/test_dashboard_utils.cjs
           node --test tests/test_ui_behavior.cjs
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: pip
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: pip
@@ -66,7 +66,7 @@ jobs:
           test -n "$(find artifacts -name '*_test_metrics.json' -size +0c -print -quit)"
       - name: Upload evaluation metrics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: evaluation-metrics
           path: artifacts/*_metrics.json

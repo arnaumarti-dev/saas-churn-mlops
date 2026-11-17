@@ -16,7 +16,7 @@ permissions:
 jobs:
   chromium-visual:
     name: Chromium responsive and interaction QA
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
@@ -53,7 +53,7 @@ jobs:
           npx playwright test --config tests/browser/playwright.config.cjs
       - name: Upload QA screenshots, traces and report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: churn-browser-visual-qa
           path: |

@@ -34,7 +34,7 @@ permissions:
 jobs:
   security-and-rls:
     name: Signed OIDC tokens and PostgreSQL tenant RLS
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     services:
       postgres:
@@ -57,7 +57,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -93,7 +93,7 @@ jobs:
         run: PYTHONPATH=src pytest -q tests/test_staging_browser_e2e.py
       - name: Upload synthetic private staging screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: churn-private-console-qa
           path: test-results/private-staging-qa/
