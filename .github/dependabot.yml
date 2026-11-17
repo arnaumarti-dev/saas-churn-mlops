@@ -20,6 +20,11 @@ updates:
       - dependency-name: numpy
         versions:
           - ">=2.5.0"
+      # Pandas 3.1+ needs NumPy >=2; keep this coordinated with a later
+      # explicitly tested Python/NumPy migration.
+      - dependency-name: pandas
+        versions:
+          - ">=3.1.0"
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
